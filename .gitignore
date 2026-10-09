@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# OS & Temp
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

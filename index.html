@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+  <html lang="vi">
+  <head>
+      <meta charset="UTF-8">
+
+      <!-- Thiết lập responsive trên điện thoại -->
+      <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1.0,
+          viewport-fit=cover"
+      >
+
+      <meta
+          name="description"
+          content="Website chúc mừng sinh nhật dành cho người
+          đặc biệt."
+      >
+
+      <title>Happy Birthday My Love</title>
+
+      <!-- Biểu tượng Tab Trình Duyệt (Favicon) tránh lỗi 404 và quay vòng tải trang -->
+      <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💖</text></svg>">
+
+      <!-- Chống lưu cache trình duyệt để cập nhật code tức thì khi F5 -->
+      <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+      <meta http-equiv="Pragma" content="no-cache">
+      <meta http-equiv="Expires" content="0">
+
+      <!-- CSS được tách riêng hoàn toàn -->
+      <link rel="stylesheet" href="css/style.css">
+  </head>
+
+  <body>
+      <!-- =====================================================
+           MÀN HÌNH CHỜ (PRE-INTRO) VÀ HIỆU ỨNG ÁNH SÁNG
+      ====================================================== -->
+      <section id="preIntroScreen" class="pre-intro-screen">
+          <canvas id="warpCanvas" class="warp-canvas" aria-hidden="true"></canvas>
+          <div class="pre-intro-content">
+              <button id="exploreHeartBtn" class="explore-heart-btn" type="button">
+                  Khám phá trái tim bạn
+              </button>
+          </div>
+      </section>
+
+      <!-- =====================================================
+           INTRO DẢI NGÂN HÀ
+           Canvas được vẽ bằng JavaScript, không cần thư viện ngoài.
+      ====================================================== -->
+      <section
+          id="galaxyIntro"
+          class="galaxy-intro is-hidden"
+          aria-labelledby="introTitle"
+          aria-hidden="true"
+      >
+          <canvas
+              id="galaxyCanvas"
+              class="galaxy-canvas"
+              aria-hidden="true"
+          ></canvas>
+
+          <div class="intro-nebula" aria-hidden="true"></div>
+          <div class="intro-vignette" aria-hidden="true"></div>
+
+          <div class="intro-copy">
+              <p class="intro-kicker">A universe made just for you</p>
+              <h1 id="introTitle" class="intro-title">
+                  To the one who makes
+                  <span>my universe glow</span>
+              </h1>
+              <p class="intro-subtitle">
+                  Chạm vào những lời yêu thương đang bay giữa các vì sao
+              </p>
+          </div>
+
+          <!-- Các nút này được JavaScript đặt lên quỹ đạo 3D giả lập. -->
+          <div id="orbitLayer" class="orbit-layer">
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="0"
+                  data-intro-title="Happy Birthday"
+                  data-intro-message="Chúc cô gái đặc biệt nhất của anh có một sinh nhật ngập tràn tiếng cười và yêu thương."
+              >
+                  Happy Birthday
+              </button>
+
+              <button
+                  class="orbit-item orbit-icon"
+                  type="button"
+                  data-orbit-index="1"
+                  data-intro-title="Một trái tim nhỏ"
+                  data-intro-message="Trái tim này luôn hướng về em, hôm nay và cả những ngày thật lâu về sau."
+                  aria-label="Mở lời nhắn từ trái tim"
+              >
+                  ♥
+              </button>
+
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="2"
+                  data-intro-title="Mi Amor"
+                  data-intro-message="Cảm ơn em vì đã xuất hiện và khiến thế giới của anh trở nên dịu dàng hơn."
+              >
+                  Mi Amor
+              </button>
+
+              <button
+                  class="orbit-item orbit-icon"
+                  type="button"
+                  data-orbit-index="3"
+                  data-intro-title="Ngôi sao của anh"
+                  data-intro-message="Dù giữa hàng triệu vì sao, anh vẫn sẽ luôn nhận ra ánh sáng của em."
+                  aria-label="Mở lời nhắn từ ngôi sao"
+              >
+                  ✦
+              </button>
+
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="4"
+                  data-intro-title="I Love You"
+                  data-intro-message="Ba từ thật ngắn, nhưng là điều anh muốn nói với em trong tất cả những ngày phía trước."
+              >
+                  I Love You
+              </button>
+
+              <button
+                  class="orbit-item orbit-icon"
+                  type="button"
+                  data-orbit-index="5"
+                  data-intro-title="Món quà bí mật"
+                  data-intro-message="Một thế giới nhỏ đã được chuẩn bị riêng cho em. Hãy bước vào và khám phá nhé!"
+                  aria-label="Mở lời nhắn từ món quà"
+              >
+                  🎁
+              </button>
+          </div>
+
+          <button id="enterUniverseButton" class="enter-universe-button" type="button">
+              <span class="enter-button-stars" aria-hidden="true">✦</span>
+              <span>Bước vào thế giới của chúng mình</span>
+              <span class="enter-button-arrow" aria-hidden="true">→</span>
+          </button>
+
+          <p class="intro-sound-note">
+              <span aria-hidden="true">✧</span> Một điều kỳ diệu đang chờ em
+          </p>
+
+          <div
+              id="introMessageModal"
+              class="intro-message-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="introMessageTitle"
+              aria-hidden="true"
+          >
+              <div class="intro-message-backdrop" data-close-intro-message></div>
+
+              <article class="intro-message-card">
+                  <span class="intro-card-glow" aria-hidden="true"></span>
+                  <p class="intro-card-kicker">A little message for you</p>
+                  <div class="intro-card-icon" aria-hidden="true">♥</div>
+                  <h2 id="introMessageTitle">Happy Birthday</h2>
+                  <p id="introMessageText"></p>
+                  <button
+                      id="closeIntroMessageButton"
+                      class="intro-message-close"
+                      type="button"
+                  >
+                      Đóng lời nhắn
+                  </button>
+              </article>
+          </div>
+      </section>
+
+      <!-- =====================================================
+           CÁC LỚP TRANG TRÍ NỀN
+      ====================================================== -->
+      <div class="background-decoration" aria-hidden="true">
+          <span class="background-blob blob-one"></span>
+          <span class="background-blob blob-two"></span>
+          <span class="background-blob blob-three"></span>
+      </div>
+
+      <!-- JavaScript sẽ tạo các trái tim bay tại đây -->
+      <div
+          id="heartBackground"
+          class="heart-background"
+          aria-hidden="true"
+      ></div>
+
+      <!-- =====================================================
+           MÀN HÌNH NHẬP MẬT KHẨU
+      ====================================================== -->
+      <section
+          id="lockScreen"
+          class="lock-screen"
+          aria-labelledby="lockTitle"
+          aria-hidden="false"
+      >
+          <div id="lockCard" class="lock-card">
+              <div class="lock-decoration" aria-hidden="true">
+                  <span>♥</span>
+                  <span>✦</span>
+                  <span>♥</span>
+              </div>
+
+              <!-- Ảnh đại diện -->
+              <div class="avatar-wrapper">
+                  <span class="avatar-glow" aria-hidden="true"></span>
+
+                  <img
+                      id="lockAvatar"
+                      class="lock-avatar"
+                      src="assets/images/image_c5395a.png"
+                      alt="Ảnh đại diện của người thương"
+                  >
+
+                  <span class="avatar-heart" aria-hidden="true">♥</span>
+              </div>
+
+              <p class="eyebrow">A little secret for you</p>
+
+              <h1 id="lockTitle" class="lock-title">
+                  Nhập mật mã tình yêu
+              </h1>
+
+              <p
+                  id="lockMessage"
+                  class="lock-message"
+                  aria-live="polite"
+              >
+                  Gợi ý: Một ngày thật đặc biệt
+              </p>
+
+              <!-- Bốn chấm mật khẩu -->
+              <div
+                  id="passcodeDisplay"
+                  class="passcode-display"
+                  aria-label="Mật khẩu gồm bốn chữ số"
+              >
+                  <span class="passcode-dot"></span>
+                  <span class="passcode-dot"></span>
+                  <span class="passcode-dot"></span>
+                  <span class="passcode-dot"></span>
+              </div>
+
+              <!-- Bàn phím số -->
+              <div class="keypad" aria-label="Bàn phím nhập mật
+              khẩu">
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="1"
+                  >
+                      1
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="2"
+                  >
+                      2
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="3"
+                  >
+                      3
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="4"
+                  >
+                      4
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="5"
+                  >
+                      5
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="6"
+                  >
+                      6
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="7"
+                  >
+                      7
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="8"
+                  >
+                      8
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="9"
+                  >
+                      9
+                  </button>
+
+                  <button
+                      id="clearPasscodeButton"
+                      class="keypad-button keypad-action"
+                      type="button"
+                      aria-label="Xóa toàn bộ mật khẩu"
+                  >
+                      C
+                  </button>
+
+                  <button
+                      class="keypad-button"
+                      type="button"
+                      data-number="0"
+                  >
+                      0
+                  </button>
+
+                  <button
+                      id="deletePasscodeButton"
+                      class="keypad-button keypad-action"
+                      type="button"
+                      aria-label="Xóa một chữ số"
+                  >
+                      ⌫
+                  </button>
+              </div>
+
+              <p class="lock-footer">
+                  Made with <span aria-hidden="true">♥</span>
+                  for you
+              </p>
+          </div>
+      </section>
+
+      <!-- =====================================================
+           DASHBOARD CHÍNH
+      ====================================================== -->
+      <main
+          id="mainDashboard"
+          class="main-dashboard"
+          aria-hidden="true"
+      >
+          <section class="dashboard-card">
+              <div class="dashboard-header">
+                  <div class="dashboard-avatar-wrapper">
+                      <img
+                          id="dashboardAvatar"
+                          class="dashboard-avatar"
+                          src="assets/images/image_c5395a.png"
+                          alt="Ảnh đại diện"
+                      >
+
+                      <span class="dashboard-avatar-badge" aria-hidden="true">
+                          ♥
+                      </span>
+                  </div>
+
+                  <p class="dashboard-small-title">
+                      For my favorite person
+                  </p>
+
+                  <h2 class="dashboard-title">
+                      Happy Birthday,
+                      <span>My Love!</span>
+                  </h2>
+
+                  <p class="dashboard-description">
+                      Một góc nhỏ xinh được chuẩn bị dành riêng
+                      cho cậu.
+                      Hãy lần lượt mở từng món quà nhé!
+                  </p>
+              </div>
+
+              <!-- Bốn nút menu chính -->
+              <div class="menu-grid">
+                  <button
+                      class="menu-button music-menu"
+                      type="button"
+                      data-modal="musicModal"
+                  >
+                      <span class="menu-icon" aria-hidden="true">♫</span>
+
+                      <span class="menu-content">
+                          <strong>Music</strong>
+                          <small>Giai điệu của chúng mình</small>
+                      </span>
+
+                      <span class="menu-arrow" aria-hidden="true">›</span>
+                  </button>
+
+                  <button
+                      class="menu-button letter-menu"
+                      type="button"
+                      data-modal="letterModal"
+                  >
+                      <span class="menu-icon" aria-hidden="true">✉</span>
+
+                      <span class="menu-content">
+                          <strong>Letter</strong>
+                          <small>Một lá thư dành cho cậu</small>
+                      </span>
+
+                      <span class="menu-arrow" aria-hidden="true">›</span>
+                  </button>
+
+                  <button
+                      class="menu-button image-menu"
+                      type="button"
+                      data-modal="imageModal"
+                  >
+                      <span class="menu-icon" aria-hidden="true">▧</span>
+
+                      <span class="menu-content">
+                          <strong>Image</strong>
+                          <small>Những khoảnh khắc đáng nhớ</small>
+                      </span>
+
+                      <span class="menu-arrow" aria-hidden="true">›</span>
+                  </button>
+
+                  <button
+                      class="menu-button gift-menu"
+                      type="button"
+                      data-modal="giftModal"
+                  >
+                      <span class="menu-icon" aria-hidden="true">🎁</span>
+
+                      <span class="menu-content">
+                          <strong>Gift</strong>
+                          <small>Món quà bất ngờ cuối cùng</small>
+                      </span>
+
+                      <span class="menu-arrow" aria-hidden="true">›</span>
+                  </button>
+              </div>
+
+              <p class="dashboard-footer">
+                  Made with
+                  <span aria-hidden="true">♥</span>
+                  just for you
+              </p>
+          </section>
+      </main>
+
+      <!-- =====================================================
+           MODAL MUSIC
+           Hiện tại chỉ dựng giao diện, chưa dùng file âm thanh.
+      ====================================================== -->
+      <section
+          id="musicModal"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="musicModalTitle"
+          aria-hidden="true"
+      >
+          <div class="modal-backdrop" data-close-modal></div>
+
+          <div class="modal-dialog music-dialog">
+              <button
+                  class="modal-close"
+                  type="button"
+                  data-close-modal
+                  aria-label="Đóng cửa sổ âm nhạc"
+              >
+                  ×
+              </button>
+
+              <div class="modal-heading">
+                  <p class="modal-eyebrow">Our melody</p>
+                  <h2 id="musicModalTitle">Bài hát của chúng
+                  mình</h2>
+              </div>
+
+              <div class="music-preview">
+                  <div
+                      id="vinylRecord"
+                      class="vinyl-record"
+                      aria-hidden="true"
+                  >
+                      <div class="vinyl-rings"></div>
+
+                      <div class="vinyl-label">
+                          <img
+                              id="vinylAvatar"
+                              src="assets/images/image_c5395a.png"
+                              alt=""
+                          >
+                      </div>
+                  </div>
+
+                  <div class="song-information">
+                      <span class="coming-soon-badge">
+                          Coming soon
+                      </span>
+
+                      <h3>Một bài hát dành riêng cho cậu</h3>
+
+                      <p>
+                          Phần âm nhạc sẽ được bổ sung trong bản
+                          nâng cấp
+                          tiếp theo.
+                      </p>
+                  </div>
+
+                  <!-- Thanh tiến độ chỉ dùng để minh họa giao
+                  diện -->
+                  <div class="fake-music-progress" aria-hidden="true">
+                      <span>00:00</span>
+                      <div class="fake-progress-track">
+                          <span></span>
+                      </div>
+                      <span>03:29</span>
+                  </div>
+
+                  <button
+                      id="musicPreviewButton"
+                      class="music-preview-button"
+                      type="button"
+                  >
+                      <span aria-hidden="true">▶</span>
+                      Xem hiệu ứng
+                  </button>
+              </div>
+          </div>
+      </section>
+
+      <!-- =====================================================
+           MODAL LETTER
+      ====================================================== -->
+      <section
+          id="letterModal"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="letterModalTitle"
+          aria-hidden="true"
+      >
+          <div class="modal-backdrop" data-close-modal></div>
+
+          <div class="modal-dialog letter-dialog">
+              <button
+                  class="modal-close"
+                  type="button"
+                  data-close-modal
+                  aria-label="Đóng lá thư"
+              >
+                  ×
+              </button>
+
+              <div class="modal-heading">
+                  <p class="modal-eyebrow">A letter for you</p>
+                  <h2 id="letterModalTitle">Cậu có một lá thư</h2>
+              </div>
+
+              <p id="envelopeHint" class="envelope-hint">
+                  Chạm vào phong thư để mở nhé!
+              </p>
+
+              <div
+                  id="envelope"
+                  class="envelope"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Mở phong thư"
+              >
+                  <!-- Tờ thư nằm bên trong phong bì -->
+                  <div class="letter-paper">
+                      <div class="letter-paper-content">
+                          <span class="letter-label">
+                              To my love ♥
+                          </span>
+
+                          <p id="typedLetter" class="typed-letter"></p>
+
+                          <span
+                              id="typingCursor"
+                              class="typing-cursor"
+                              aria-hidden="true"
+                          ></span>
+                      </div>
+                  </div>
+
+                  <!-- Các bộ phận của phong bì -->
+                  <div class="envelope-back"></div>
+                  <div class="envelope-left"></div>
+                  <div class="envelope-right"></div>
+                  <div class="envelope-bottom"></div>
+                  <div class="envelope-flap"></div>
+
+                  <div class="envelope-seal" aria-hidden="true">
+                      ♥
+                  </div>
+              </div>
+          </div>
+      </section>
+
+      <!-- =====================================================
+           MODAL IMAGE / GALLERY
+           Ảnh minh họa được tạo tự động bằng JavaScript.
+      ====================================================== -->
+      <section
+          id="imageModal"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="imageModalTitle"
+          aria-hidden="true"
+      >
+          <div class="modal-backdrop" data-close-modal></div>
+
+          <div class="modal-dialog image-dialog">
+              <button
+                  class="modal-close"
+                  type="button"
+                  data-close-modal
+                  aria-label="Đóng bộ sưu tập ảnh"
+              >
+                  ×
+              </button>
+
+              <div class="modal-heading">
+                  <p class="modal-eyebrow">Our memories</p>
+                  <h2 id="imageModalTitle">
+                      Những khoảnh khắc của chúng mình
+                  </h2>
+              </div>
+
+              <div class="carousel">
+                  <div class="carousel-frame">
+                      <img
+                          id="galleryImage"
+                          src="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%201%201%27%2F%3E"
+                          alt="Ảnh minh họa kỷ niệm"
+                      >
+
+                      <div class="carousel-gradient"></div>
+
+                      <div class="carousel-label">
+                          <span id="galleryMiniLabel">
+                              Memory 01
+                          </span>
+
+                          <p id="galleryCaption">
+                              Một khoảnh khắc thật dịu dàng
+                          </p>
+                      </div>
+                  </div>
+
+                  <div class="carousel-controls">
+                      <button
+                          id="previousImageButton"
+                          class="carousel-button"
+                          type="button"
+                      >
+                          <span aria-hidden="true">←</span>
+                          Prev
+                      </button>
+
+                      <div
+                          id="galleryDots"
+                          class="gallery-dots"
+                          aria-label="Vị trí ảnh hiện tại"
+                      ></div>
+
+                      <button
+                          id="nextImageButton"
+                          class="carousel-button"
+                          type="button"
+                      >
+                          Next
+                          <span aria-hidden="true">→</span>
+                      </button>
+                  </div>
+
+                  <p id="galleryCounter" class="gallery-counter">
+                      1 / 6
+                  </p>
+
+                  <p class="gallery-note">
+                      Đây là ảnh minh họa. Bạn có thể thay bằng
+                      ảnh thật
+                      trong lần nâng cấp sau.
+                  </p>
+              </div>
+          </div>
+      </section>
+
+      <!-- =====================================================
+           MODAL GIFT
+      ====================================================== -->
+      <section
+          id="giftModal"
+          class="modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="giftModalTitle"
+          aria-hidden="true"
+      >
+          <div class="modal-backdrop" data-close-modal></div>
+
+          <div class="modal-dialog gift-dialog">
+              <button
+                  class="modal-close"
+                  type="button"
+                  data-close-modal
+                  aria-label="Đóng món quà"
+              >
+                  ×
+              </button>
+
+              <!-- Hộp quà được dựng hoàn toàn bằng CSS -->
+              <div class="gift-box-wrapper" aria-hidden="true">
+                  <div id="giftBox" class="gift-box">
+                      <div class="gift-lid">
+                          <span class="gift-bow gift-bow-left"></span>
+                          <span class="gift-bow gift-bow-right"></span>
+                          <span class="gift-knot"></span>
+                      </div>
+
+                      <div class="gift-body">
+                          <span class="gift-ribbon"></span>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="modal-heading">
+                  <p class="modal-eyebrow">One more surprise</p>
+                  <h2 id="giftModalTitle">Điều ước sinh nhật</h2>
+              </div>
+
+              <p class="gift-message">
+                  Mong những niềm vui nhỏ bé sẽ luôn bay đến bên
+                  cậu,
+                  không chỉ hôm nay mà trong tất cả những ngày
+                  sau này.
+              </p>
+
+              <button
+                  id="releaseBubblesButton"
+                  class="release-button"
+                  type="button"
+              >
+                  <span aria-hidden="true">♥</span>
+                  Thả bong bóng
+              </button>
+          </div>
+      </section>
+
+      <!-- Bong bóng ảnh Gift sẽ được JavaScript thêm vào đây
+      -->
+      <div
+          id="giftBubbleLayer"
+          class="gift-bubble-layer"
+          aria-hidden="true"
+      ></div>
+
+      <!-- Thông báo nhỏ ở cuối màn hình -->
+      <div
+          id="toast"
+          class="toast"
+          role="status"
+          aria-live="polite"
+      ></div>
+
+      <!-- JavaScript được tách riêng hoàn toàn -->
+      <script src="js/main.js"></script>
+  </body>
+  </html>
