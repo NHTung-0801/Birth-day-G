@@ -2078,13 +2078,51 @@
       window.addEventListener("resize", resizeWarpCanvas, { passive: true });
       resizeWarpCanvas();
 
+      const CUTE_HEART_COLORS = [
+          "#ff75a0",
+          "#ff8fb1",
+          "#ffaec9",
+          "#ffccd5",
+          "#fbcfe8",
+          "#e9d5ff",
+          "#ffffff",
+          "#ff9eaa"
+      ];
+
       for (let i = 0; i < WARP_PARTICLE_COUNT; i++) {
           warpParticles.push({
               x: (Math.random() - 0.5) * 2500,
               y: (Math.random() - 0.5) * 2500,
               z: Math.random() * 2500,
-              color: Math.random() > 0.6 ? "#ff79aa" : (Math.random() > 0.5 ? "#f1eaff" : "#ffc2da")
+              color: CUTE_HEART_COLORS[Math.floor(Math.random() * CUTE_HEART_COLORS.length)],
+              rot: (Math.random() - 0.5) * 0.6,
+              rotSpeed: (Math.random() - 0.5) * 0.015,
+              baseScale: 0.85 + Math.random() * 0.45
           });
+      }
+
+      function drawCuteHeart(ctx, x, y, size, rotation, color, alpha) {
+          ctx.save();
+          ctx.translate(x, y);
+          if (rotation) {
+              ctx.rotate(rotation);
+          }
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = color;
+          if (size > 4.2) {
+              ctx.shadowBlur = 6;
+              ctx.shadowColor = color;
+          }
+          
+          ctx.beginPath();
+          const topY = -size * 0.35;
+          const bottomY = size * 0.85;
+          ctx.moveTo(0, topY);
+          ctx.bezierCurveTo(-size * 0.75, -size * 1.0, -size * 1.3, -size * 0.05, 0, bottomY);
+          ctx.bezierCurveTo(size * 1.3, -size * 0.05, size * 0.75, -size * 1.0, 0, topY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
       }
 
       let warpSpeed = 1;
@@ -2111,28 +2149,34 @@
                   p.z = 2500;
               }
 
+              p.rot += p.rotSpeed;
+
               const k = 800 / p.z;
               const px = cx + p.x * k;
               const py = cy + p.y * k;
               
-              let size = Math.max(0.5, (2500 - p.z) / 400);
+              const depthProgress = (2500 - p.z) / 2500;
+              const heartSize = Math.max(1.8, (depthProgress * 6.5 + 1.6) * (p.baseScale || 1));
+              const alpha = Math.min(1, Math.max(0.4, depthProgress * 0.85 + 0.35));
 
               if (isWarping) {
                   const prevK = 800 / previousZ;
                   const prevPx = cx + p.x * prevK;
                   const prevPy = cy + p.y * prevK;
                   
+                  ctx.save();
                   ctx.strokeStyle = p.color;
-                  ctx.lineWidth = size * 1.5;
+                  ctx.lineWidth = Math.max(1, heartSize * 0.5);
+                  ctx.globalAlpha = Math.min(1, alpha * 1.2);
                   ctx.beginPath();
                   ctx.moveTo(prevPx, prevPy);
                   ctx.lineTo(px, py);
                   ctx.stroke();
+                  ctx.restore();
+
+                  drawCuteHeart(ctx, px, py, heartSize * 1.25, p.rot, p.color, alpha);
               } else {
-                  ctx.fillStyle = p.color;
-                  ctx.beginPath();
-                  ctx.arc(px, py, size, 0, Math.PI * 2);
-                  ctx.fill();
+                  drawCuteHeart(ctx, px, py, heartSize, p.rot, p.color, alpha);
               }
           });
 
