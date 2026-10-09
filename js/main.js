@@ -653,6 +653,8 @@
           galaxyIntro.setAttribute("aria-hidden", "true");
           isGalaxyIntroActive = false;
           window.cancelAnimationFrame(galaxyAnimationFrame);
+          lockScreen.classList.remove("is-hidden");
+          lockScreen.setAttribute("aria-hidden", "false");
           lockScreen.focus?.();
 
           if (keypadNumberButtons[0]) {
@@ -2033,9 +2035,10 @@
           "true"
       );
 
+      lockScreen.classList.add("is-hidden");
       lockScreen.setAttribute(
           "aria-hidden",
-          "false"
+          "true"
       );
   }
 
@@ -2078,26 +2081,28 @@
       window.addEventListener("resize", resizeWarpCanvas, { passive: true });
       resizeWarpCanvas();
 
+      const WARP_PARTICLE_COUNT = 650;
+
       const CUTE_HEART_COLORS = [
-          "#ff75a0",
-          "#ff8fb1",
-          "#ffaec9",
-          "#ffccd5",
-          "#fbcfe8",
-          "#e9d5ff",
-          "#ffffff",
-          "#ff9eaa"
+          "#ff598f", // Hot romantic pink
+          "#ff75a0", // Sweet rose
+          "#ffaec9", // Pastel pink
+          "#ffccd5", // Soft pink
+          "#fbcfe8", // Baby pink
+          "#e9d5ff", // Lilac lavender
+          "#ffffff", // Twinkling white
+          "#ff85a2"  // Warm coral pink
       ];
 
       for (let i = 0; i < WARP_PARTICLE_COUNT; i++) {
           warpParticles.push({
-              x: (Math.random() - 0.5) * 2500,
-              y: (Math.random() - 0.5) * 2500,
+              x: (Math.random() - 0.5) * 3200,
+              y: (Math.random() - 0.5) * 3200,
               z: Math.random() * 2500,
               color: CUTE_HEART_COLORS[Math.floor(Math.random() * CUTE_HEART_COLORS.length)],
-              rot: (Math.random() - 0.5) * 0.6,
-              rotSpeed: (Math.random() - 0.5) * 0.015,
-              baseScale: 0.85 + Math.random() * 0.45
+              rot: (Math.random() - 0.5) * 0.8,
+              rotSpeed: (Math.random() - 0.5) * 0.02,
+              baseScale: 0.95 + Math.random() * 0.1
           });
       }
 
@@ -2109,24 +2114,88 @@
           }
           ctx.globalAlpha = alpha;
           ctx.fillStyle = color;
-          if (size > 4.2) {
-              ctx.shadowBlur = 6;
+          if (size > 2.8) {
+              ctx.shadowBlur = 4;
               ctx.shadowColor = color;
           }
           
+          // Vẽ hình trái tim bé xíu, cong tròn xinh xắn
           ctx.beginPath();
-          const topY = -size * 0.35;
-          const bottomY = size * 0.85;
-          ctx.moveTo(0, topY);
-          ctx.bezierCurveTo(-size * 0.75, -size * 1.0, -size * 1.3, -size * 0.05, 0, bottomY);
-          ctx.bezierCurveTo(size * 1.3, -size * 0.05, size * 0.75, -size * 1.0, 0, topY);
+          ctx.moveTo(0, -size * 0.35);
+          ctx.bezierCurveTo(-size * 0.8, -size * 1.05, -size * 1.5, -size * 0.1, 0, size * 1.2);
+          ctx.bezierCurveTo(size * 1.5, -size * 0.1, size * 0.8, -size * 1.05, 0, -size * 0.35);
           ctx.closePath();
           ctx.fill();
           ctx.restore();
       }
 
-      let warpSpeed = 1;
+      function drawPortalRing(ctx, cx, cy, radius, alpha) {
+          if (radius <= 0 || alpha <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, alpha);
+
+          // Vùng hào quang năng lượng bên trong vòng sáng
+          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.25);
+          grad.addColorStop(0, "rgba(255, 195, 235, 0.45)");
+          grad.addColorStop(0.55, "rgba(235, 90, 180, 0.28)");
+          grad.addColorStop(0.85, "rgba(180, 60, 240, 0.16)");
+          grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 1.25, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Hào quang neon phát sáng
+          ctx.shadowBlur = Math.min(35, radius * 0.5 + 12);
+          ctx.shadowColor = "#ff69b4";
+
+          // Viền chính của vòng sáng
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = Math.max(2, Math.min(8, radius * 0.05));
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Viền phụ màu hồng neon tạo hiệu ứng thấu kính ánh sáng
+          ctx.strokeStyle = "rgba(255, 110, 185, 0.75)";
+          ctx.lineWidth = Math.max(1.5, ctx.lineWidth * 0.6);
+          ctx.beginPath();
+          ctx.arc(cx, cy, radius * 1.08, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.restore();
+      }
+
+      function drawCenterGlowingHeart(ctx, cx, cy, size, alpha) {
+          if (size <= 0 || alpha <= 0) return;
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, alpha);
+
+          // Hào quang rực rỡ tỏa ra từ trái tim
+          ctx.shadowBlur = Math.min(45, size * 0.7 + 12);
+          ctx.shadowColor = "#ff4fbd";
+
+          // Màu gradient từ tâm trắng sáng tỏa ra hồng thắm
+          const heartGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 1.3);
+          heartGrad.addColorStop(0, "#ffffff");
+          heartGrad.addColorStop(0.4, "#ff7db8");
+          heartGrad.addColorStop(0.85, "#eb3687");
+          heartGrad.addColorStop(1, "#c91668");
+          ctx.fillStyle = heartGrad;
+
+          ctx.beginPath();
+          ctx.moveTo(cx, cy - size * 0.35);
+          ctx.bezierCurveTo(cx - size * 0.8, cy - size * 1.05, cx - size * 1.5, cy - size * 0.1, cx, cy + size * 1.2);
+          ctx.bezierCurveTo(cx + size * 1.5, cy - size * 0.1, cx + size * 0.8, cy - size * 1.05, cx, cy - size * 0.35);
+          ctx.closePath();
+          ctx.fill();
+
+          ctx.restore();
+      }
+
+      let warpSpeed = 1.2;
       let isWarping = false;
+      let warpStartTime = 0;
 
       function renderWarpFrame() {
           if (preIntroScreen.classList.contains("is-hidden")) return;
@@ -2137,15 +2206,39 @@
           const cx = width / 2;
           const cy = height / 2;
 
-          ctx.fillStyle = isWarping ? "rgba(5, 1, 10, 0.18)" : "rgba(5, 1, 10, 0.4)";
-          ctx.fillRect(0, 0, width, height);
+          const now = performance.now();
+          const elapsedWarp = isWarping ? (now - warpStartTime) : 0;
 
+          // Tính toán hệ số laser theo các giai đoạn
+          let laserAlpha = 1.0;
+          if (isWarping) {
+              if (elapsedWarp < 2000) {
+                  laserAlpha = 1.0;
+              } else if (elapsedWarp < 3200) {
+                  // Sau 2s: Laser giảm dần nhường chỗ cho vòng sáng
+                  laserAlpha = 1.0 - ((elapsedWarp - 2000) / 1200) * 0.45;
+              } else {
+                  // Sau 3.2s: Đi qua vòng sáng, laser kết thúc hoàn toàn
+                  laserAlpha = Math.max(0, 1.0 - ((elapsedWarp - 3200) / 600));
+              }
+          }
+
+          if (isWarping) {
+              ctx.fillStyle = "rgba(5, 1, 10, 0.22)";
+              ctx.fillRect(0, 0, width, height);
+          } else {
+              // Nền đen vũ trụ sâu thẳm
+              ctx.fillStyle = "#05010a";
+              ctx.fillRect(0, 0, width, height);
+          }
+
+          // Vẽ các hạt / tia laser bay từ tâm
           warpParticles.forEach(p => {
               const previousZ = p.z;
               p.z -= warpSpeed;
               if (p.z <= 0) {
-                  p.x = (Math.random() - 0.5) * 2500;
-                  p.y = (Math.random() - 0.5) * 2500;
+                  p.x = (Math.random() - 0.5) * 3200;
+                  p.y = (Math.random() - 0.5) * 3200;
                   p.z = 2500;
               }
 
@@ -2154,34 +2247,79 @@
               const k = 800 / p.z;
               const px = cx + p.x * k;
               const py = cy + p.y * k;
+
+              if (px < -40 || px > width + 40 || py < -40 || py > height + 40) {
+                  return;
+              }
               
               const depthProgress = (2500 - p.z) / 2500;
-              const heartSize = Math.max(1.8, (depthProgress * 6.5 + 1.6) * (p.baseScale || 1));
-              const alpha = Math.min(1, Math.max(0.4, depthProgress * 0.85 + 0.35));
+              const heartSize = (4.0 + depthProgress * 2.0) * (p.baseScale || 1);
+              const alpha = Math.min(1, Math.max(0.45, depthProgress * 0.7 + 0.45));
 
               if (isWarping) {
-                  const prevK = 800 / previousZ;
-                  const prevPx = cx + p.x * prevK;
-                  const prevPy = cy + p.y * prevK;
-                  
-                  ctx.save();
-                  ctx.strokeStyle = p.color;
-                  ctx.lineWidth = Math.max(1, heartSize * 0.5);
-                  ctx.globalAlpha = Math.min(1, alpha * 1.2);
-                  ctx.beginPath();
-                  ctx.moveTo(prevPx, prevPy);
-                  ctx.lineTo(px, py);
-                  ctx.stroke();
-                  ctx.restore();
+                  if (laserAlpha > 0.02) {
+                      const prevK = 800 / previousZ;
+                      const prevPx = cx + p.x * prevK;
+                      const prevPy = cy + p.y * prevK;
+                      
+                      ctx.save();
+                      ctx.strokeStyle = p.color;
+                      ctx.lineWidth = Math.max(1.5, heartSize * 0.4);
+                      ctx.globalAlpha = Math.min(1, alpha * 1.2 * laserAlpha);
+                      ctx.beginPath();
+                      ctx.moveTo(prevPx, prevPy);
+                      ctx.lineTo(px, py);
+                      ctx.stroke();
+                      ctx.restore();
 
-                  drawCuteHeart(ctx, px, py, heartSize * 1.25, p.rot, p.color, alpha);
+                      drawCuteHeart(ctx, px, py, heartSize * 1.2, p.rot, p.color, alpha * laserAlpha);
+                  }
               } else {
                   drawCuteHeart(ctx, px, py, heartSize, p.rot, p.color, alpha);
               }
           });
 
+          // Hiệu ứng chuyển cảnh: Sau khoảng 2s xuất hiện vòng sáng và trái tim phóng to dần
           if (isWarping) {
-              warpSpeed = Math.min(warpSpeed * 1.06, 120);
+              if (elapsedWarp >= 2000 && elapsedWarp < 3200) {
+                  // Giai đoạn: Vòng sáng nhỏ xuất hiện ở giữa và nhìn thấy trái tim ở xa
+                  const p1 = (elapsedWarp - 2000) / 1200;
+                  const ringRadius = 15 + p1 * 50;
+                  const ringAlpha = Math.min(1, p1 * 1.2);
+                  drawPortalRing(ctx, cx, cy, ringRadius, ringAlpha);
+
+                  const centerHeartSize = 6 + p1 * 14;
+                  drawCenterGlowingHeart(ctx, cx, cy, centerHeartSize, Math.min(1, p1 * 1.2));
+              } else if (elapsedWarp >= 3200) {
+                  // Giai đoạn: Bay xuyên qua vòng sáng, vòng sáng mở rộng và trái tim phóng to liên tục
+                  const p2 = Math.min(1, (elapsedWarp - 3200) / 1200);
+                  const easeZoom = Math.pow(p2, 2.6);
+                  const maxDim = Math.max(width, height);
+
+                  // Vòng sáng nở to bao trùm toàn bộ màn hình
+                  const ringRadius = 65 + easeZoom * (maxDim * 1.4);
+                  const ringAlpha = Math.max(0, 1 - p2 * 0.6);
+                  drawPortalRing(ctx, cx, cy, ringRadius, ringAlpha);
+
+                  // Trái tim ở giữa phóng to liên tục từ xa lại gần
+                  const targetHeartMax = Math.min(width, height) * 0.22;
+                  const centerHeartSize = 20 + easeZoom * targetHeartMax;
+                  drawCenterGlowingHeart(ctx, cx, cy, centerHeartSize, 1);
+              }
+
+              // Gia tốc laser trong 2s đầu
+              if (elapsedWarp < 2500) {
+                  warpSpeed = Math.min(warpSpeed * 1.055, 110);
+              }
+
+              // Chuyển cảnh hoàn tất tại 4.4s: Vào thẳng Stage 2 (Dải Ngân Hà)
+              if (elapsedWarp >= 4400) {
+                  galaxyIntroSection.classList.remove("is-hidden");
+                  initializeGalaxyIntro();
+                  preIntroScreen.classList.add("is-hidden");
+                  window.cancelAnimationFrame(warpAnimationFrame);
+                  return;
+              }
           } else {
               warpSpeed = 1.5;
           }
@@ -2193,16 +2331,7 @@
 
       exploreHeartBtn.addEventListener("click", () => {
           isWarping = true;
+          warpStartTime = performance.now();
           document.querySelector(".pre-intro-content").classList.add("is-fading-out");
-          
-          setTimeout(() => {
-              preIntroScreen.classList.add("is-hidden");
-              window.cancelAnimationFrame(warpAnimationFrame);
-              
-              galaxyIntroSection.classList.remove("is-hidden");
-              
-              // Init the main galaxy intro now
-              initializeGalaxyIntro();
-          }, 2400);
       });
   }
