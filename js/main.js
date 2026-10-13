@@ -110,14 +110,23 @@
   ========================================================= */
 
   const GALAXY_CONFIG = {
-      galaxyParticleCount: 1250,
-      heartParticleCount: 480,
-      backgroundStarCount: 170,
-      colors: ["#ff2fb3", "#f27cff", "#b557ff", "#ffd1f0"],
-      rotationSpeed: 0.000055,
+      galaxyParticleCount: 3800,
+      heartParticleCount: 2200,
+      backgroundStarCount: 750,
+      colors: [
+          "#ff0055", // Crimson Ruby Pink (hồng đỏ rực rỡ)
+          "#e6004c", // Deep Rose Red (đỏ hồng nhung)
+          "#ff1a66", // Glowing Crimson Rose (hồng đỏ dạ quang)
+          "#ff2a7a", // Vivid Hot Rose (hồng đỏ tươi)
+          "#ff4d88", // Coral Rose Pink (hồng đỏ san hô)
+          "#ff6699", // Soft Rose Pink (hồng thắm)
+          "#ff99bb", // Light Ruby Sparkle (bụi sáng hồng)
+          "#ffffff"  // Pure White Diamond (kim cương trắng)
+      ],
+      rotationSpeed: 0.000045,
       heartBeatSpeed: 0.0024,
-      galaxyBranches: 3,
-      galaxyTurns: 2.4
+      galaxyBranches: 2,
+      galaxyTurns: 3.2
   };
 
   /* =========================================================
@@ -127,6 +136,7 @@
   // Intro galaxy
   const galaxyIntro = document.getElementById("galaxyIntro");
   const galaxyCanvas = document.getElementById("galaxyCanvas");
+  const orbitLayer = document.getElementById("orbitLayer");
   const orbitItems = Array.from(
       document.querySelectorAll(".orbit-item")
   );
@@ -142,9 +152,15 @@
   const introMessageText = document.getElementById(
       "introMessageText"
   );
+  const introMessageBackdrop = document.querySelector(
+      ".intro-message-backdrop"
+  );
   const closeIntroMessageButton = document.getElementById(
       "closeIntroMessageButton"
   );
+  const zoomInBtn = document.getElementById("zoomInBtn");
+  const zoomOutBtn = document.getElementById("zoomOutBtn");
+  const zoomResetBtn = document.getElementById("zoomResetBtn");
 
   // Màn hình khóa
   const lockScreen = document.getElementById("lockScreen");
@@ -264,26 +280,45 @@
   let toastTimer = null;
   let isMusicPreviewActive = false;
 
-  // Trạng thái riêng của Intro Canvas.
-  let galaxyAnimationFrame = null;
-  let galaxyParticles = [];
-  let heartParticles = [];
-  let backgroundStars = [];
-  let galaxyStartTime = 0;
+  // Trạng thái Three.js cho Chặng 2 (Interactive 3D Heart Galaxy)
+  let threeScene = null;
+  let threeCamera = null;
+  let threeRenderer = null;
+  let threeClock = null;
+  let threeAnimFrame = null;
+  let galaxyUniverseGroup = null;
+  let galaxyDiskGroup = null;
+  let heartPointsGroup = null;
+  let outerHeartPoints = null;
+  let innerHeartPoints = null;
+  let galaxyPoints = null;
+  let ambientDustPoints = null;
+  let blackHoleCore = null;
+  let accretionRing = null;
+  let backgroundStars = null;
+  let shootingStars = [];
+
+  let mouseX = 0;
+  let mouseY = 0;
+  let targetCamX = 0;
+  let targetCamY = 0;
+  let targetCamDist = 60;
+  let currentCamDist = 60;
+  let dragRotX = 0;
+  let dragRotY = 0;
+  let targetDragRotX = 0;
+  let targetDragRotY = 0;
+  let isDraggingStage2 = false;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
+  let pinchStartDist = 0;
+  let basePinchDist = 60;
+
   let isGalaxyIntroActive = true;
   let introLastFocusedElement = null;
-
-  const introPointer = {
-      isDragging: false,
-      startX: 0,
-      startY: 0,
-      dragRotationX: 0,
-      targetDragRotationX: 0,
-      dragRotationY: 0,
-      targetDragRotationY: 0,
-      velocity: 0
-  };
-
+  let isEnteringStage3 = false;
+  let enterStage3StartTime = 0;
+  let stage2EntranceStartTime = 0;
   /* =========================================================
      4. HÀM HỖ TRỢ CHUNG
   ========================================================= */
@@ -300,362 +335,617 @@
   }
 
   /* =========================================================
-     INTRO CANVAS: GALAXY + TRÁI TIM 3D GIẢ LẬP
+     INTRO THREE.JS: INTERACTIVE 3D HEART GALAXY (CHẶNG 2)
   ========================================================= */
 
-  /** Chuyển mã HEX sang chuỗi RGB để vẽ particle có alpha. */
-  function hexToRgb(hexColor) {
-      const hex = hexColor.replace("#", "");
-      const value = Number.parseInt(hex, 16);
+  /**
+   * Tạo texture hạt phát sáng mềm với tâm sáng và viền mờ ảo diệu.
+   */
+  function createParticleTexture() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext("2d");
 
-      return {
-          red: (value >> 16) & 255,
-          green: (value >> 8) & 255,
-          blue: value & 255
-      };
+      // Quầng sáng tròn mềm mại
+      const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+      gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+      gradient.addColorStop(0.18, "rgba(255, 215, 235, 0.95)");
+      gradient.addColorStop(0.45, "rgba(255, 55, 140, 0.45)");
+      gradient.addColorStop(1, "rgba(20, 0, 35, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(32, 32, 32, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tia sao chữ thập tạo hiệu ứng vì sao kim cương lấp lánh (Star flare)
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.65)";
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.moveTo(32, 5);
+      ctx.lineTo(32, 59);
+      ctx.moveTo(5, 32);
+      ctx.lineTo(59, 32);
+      ctx.stroke();
+
+      // Điểm sáng trung tâm sắc nét
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(32, 32, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      return new THREE.CanvasTexture(canvas);
   }
 
   /**
-   * Tạo dữ liệu dải ngân hà một lần, tránh cấp phát object trong
-   * mỗi frame. `radius` phân bố theo căn bậc hai để lõi sáng dày,
-   * trong khi `branch` chia particle thành các nhánh xoắn.
+   * Khởi tạo hệ thống Trái tim 3D lồng ghép:
+   * - Tăng kích thước tổng thể lên một chút (baseScale = 0.84)
+   * - Hạt phát sáng như các vì sao lấp lánh
+   * - Đường nét thanh mảnh, sắc sảo
    */
-  function createGalaxyParticles() {
-      const isSmallScreen = window.innerWidth < 700;
-      const performanceRatio = isSmallScreen ? 0.62 : 1;
-      const galaxyCount = Math.round(
-          GALAXY_CONFIG.galaxyParticleCount * performanceRatio
-      );
-      const heartCount = Math.round(
-          GALAXY_CONFIG.heartParticleCount * performanceRatio
-      );
+  function createDualHeartSystem(particleTexture) {
+      heartPointsGroup = new THREE.Group();
 
-      galaxyParticles = [];
-      heartParticles = [];
-      backgroundStars = [];
+      // 1. Trái tim viền ngoài (2,800 hạt, thanh mảnh, kích thước tăng nhẹ cân đối)
+      const outerCount = 2800;
+      const outerGeo = new THREE.BufferGeometry();
+      const outerPos = new Float32Array(outerCount * 3);
+      const outerColors = new Float32Array(outerCount * 3);
 
-      for (let index = 0; index < galaxyCount; index += 1) {
-          const radius = Math.pow(Math.random(), 0.72);
-          const branch = index % GALAXY_CONFIG.galaxyBranches;
-          const branchAngle =
-              (branch / GALAXY_CONFIG.galaxyBranches) * Math.PI * 2;
-          const spiralAngle =
-              radius * GALAXY_CONFIG.galaxyTurns * Math.PI * 2 +
-              branchAngle + randomBetween(-0.24, 0.24);
-          const spread = (1 - radius * 0.52) * randomBetween(-0.14, 0.14);
+      for (let i = 0; i < outerCount; i++) {
+          const t = Math.PI * 2 * Math.random();
+          const baseScale = 0.84;
+          let x = 16 * Math.pow(Math.sin(t), 3) * baseScale;
+          let y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * baseScale;
 
-          galaxyParticles.push({
-              radius,
-              angle: spiralAngle,
-              spread,
-              height: randomBetween(-0.18, 0.18) * (1 - radius * 0.45),
-              size: randomBetween(0.55, 2.05),
-              alpha: randomBetween(0.28, 0.95),
-              twinkle: randomBetween(0, Math.PI * 2),
-              color: hexToRgb(
-                  GALAXY_CONFIG.colors[
-                      Math.floor(Math.random() * GALAXY_CONFIG.colors.length)
-                  ]
-              )
-          });
+          // Đường nét mỏng, sắc sảo
+          let z = (Math.random() - 0.5) * 3.6 * (1.0 - Math.abs(x) / 16);
+          const jitter = 0.68;
+          x += (Math.random() - 0.5) * jitter;
+          y += (Math.random() - 0.5) * jitter;
+          z += (Math.random() - 0.5) * jitter;
+
+          outerPos[i * 3] = x;
+          outerPos[i * 3 + 1] = y + 12.5;
+          outerPos[i * 3 + 2] = z;
+
+          const p = Math.random();
+          if (p > 0.8) {
+              // Hạt sao kim cương trắng
+              outerColors[i * 3] = 1.0;
+              outerColors[i * 3 + 1] = 0.95;
+              outerColors[i * 3 + 2] = 0.98;
+          } else if (p > 0.35) {
+              // Hạt hồng đỏ dạ quang rực rỡ
+              outerColors[i * 3] = 1.0;
+              outerColors[i * 3 + 1] = 0.18;
+              outerColors[i * 3 + 2] = 0.58;
+          } else {
+              // Hạt ruby tím nhung
+              outerColors[i * 3] = 0.92;
+              outerColors[i * 3 + 1] = 0.06;
+              outerColors[i * 3 + 2] = 0.4;
+          }
       }
 
-      // Công thức parametric trái tim cổ điển, thêm trục Z để tạo khối.
-      for (let index = 0; index < heartCount; index += 1) {
-          const angle = randomBetween(0, Math.PI * 2);
-          const fill = Math.sqrt(Math.random());
-          const x = 16 * Math.pow(Math.sin(angle), 3) / 17;
-          const y = -(
-              13 * Math.cos(angle) -
-              5 * Math.cos(2 * angle) -
-              2 * Math.cos(3 * angle) -
-              Math.cos(4 * angle)
-          ) / 17;
+      outerGeo.setAttribute("position", new THREE.BufferAttribute(outerPos, 3));
+      outerGeo.setAttribute("color", new THREE.BufferAttribute(outerColors, 3));
 
-          heartParticles.push({
-              x: x * fill,
-              y: y * fill,
-              z: randomBetween(-0.32, 0.32) * (1 - fill * 0.55),
-              size: randomBetween(0.65, 1.85),
-              alpha: randomBetween(0.48, 1),
-              twinkle: randomBetween(0, Math.PI * 2),
-              color: hexToRgb(
-                  Math.random() > 0.2 ? "#ff4fbd" : "#f5b4ff"
-              )
-          });
+      const outerMat = new THREE.PointsMaterial({
+          size: 1.4,
+          map: particleTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.95,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+      });
+      outerHeartPoints = new THREE.Points(outerGeo, outerMat);
+      heartPointsGroup.add(outerHeartPoints);
+
+      // 2. Trái tim sao nhỏ lồng bên trong (1,300 hạt tinh tế)
+      const innerCount = 1300;
+      const innerGeo = new THREE.BufferGeometry();
+      const innerPos = new Float32Array(innerCount * 3);
+      const innerColors = new Float32Array(innerCount * 3);
+
+      for (let i = 0; i < innerCount; i++) {
+          const t = Math.PI * 2 * Math.random();
+          const u = Math.pow(Math.random(), 0.6);
+          const innerScale = 0.52;
+
+          let x = 16 * Math.pow(Math.sin(t), 3) * innerScale * u;
+          let y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * innerScale * u;
+
+          const rDist = Math.sqrt(Math.pow(x / 10, 2) + Math.pow(y / 10, 2));
+          const maxZ = Math.sqrt(Math.max(0, 1 - Math.min(1, rDist))) * 3.0;
+          let z = (Math.random() - 0.5) * 2 * maxZ;
+
+          const jitter = 0.52;
+          x += (Math.random() - 0.5) * jitter;
+          y += (Math.random() - 0.5) * jitter;
+          z += (Math.random() - 0.5) * jitter;
+
+          innerPos[i * 3] = x;
+          innerPos[i * 3 + 1] = y + 12.5;
+          innerPos[i * 3 + 2] = z;
+
+          const p = Math.random();
+          if (p > 0.7) {
+              innerColors[i * 3] = 1.0;
+              innerColors[i * 3 + 1] = 0.9;
+              innerColors[i * 3 + 2] = 0.96;
+          } else if (p > 0.3) {
+              innerColors[i * 3] = 1.0;
+              innerColors[i * 3 + 1] = 0.25;
+              innerColors[i * 3 + 2] = 0.68;
+          } else {
+              innerColors[i * 3] = 0.88;
+              innerColors[i * 3 + 1] = 0.1;
+              innerColors[i * 3 + 2] = 0.46;
+          }
       }
 
-      for (
-          let index = 0;
-          index < GALAXY_CONFIG.backgroundStarCount;
-          index += 1
-      ) {
-          backgroundStars.push({
-              x: Math.random(),
-              y: Math.random(),
-              size: randomBetween(0.35, 1.35),
-              alpha: randomBetween(0.12, 0.65),
-              twinkle: randomBetween(0, Math.PI * 2)
-          });
+      innerGeo.setAttribute("position", new THREE.BufferAttribute(innerPos, 3));
+      innerGeo.setAttribute("color", new THREE.BufferAttribute(innerColors, 3));
+
+      const innerMat = new THREE.PointsMaterial({
+          size: 1.2,
+          map: particleTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.88,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+      });
+      innerHeartPoints = new THREE.Points(innerGeo, innerMat);
+      heartPointsGroup.add(innerHeartPoints);
+
+      if (galaxyUniverseGroup) {
+          galaxyUniverseGroup.add(heartPointsGroup);
+      } else {
+          threeScene.add(heartPointsGroup);
       }
   }
 
-  /** Đặt kích thước bitmap Canvas theo DPR nhưng giới hạn để nhẹ GPU. */
-  function resizeGalaxyCanvas() {
-      if (!galaxyCanvas) {
-          return;
+  /**
+   * Khởi tạo Dải Ngân Hà xoắn ốc 3 nhánh mở rộng bao la (radius = 65, 9,500 hạt)
+   * nằm bên dưới trái tim và liên kết chặt chẽ vào galaxyUniverseGroup.
+   */
+  function createSpiralGalaxy(particleTexture) {
+      galaxyDiskGroup = new THREE.Group();
+      galaxyDiskGroup.position.set(0, -6, 0);
+      galaxyDiskGroup.rotation.x = 0.36;
+      galaxyDiskGroup.rotation.z = -0.08;
+
+      const galaxyParticleCount = 9500;
+      const galaxyGeo = new THREE.BufferGeometry();
+      const galaxyPos = new Float32Array(galaxyParticleCount * 3);
+      const galaxyColors = new Float32Array(galaxyParticleCount * 3);
+
+      const arms = 3;
+      const galaxyRadius = 65;
+
+      for (let i = 0; i < galaxyParticleCount; i++) {
+          const r = Math.pow(Math.random(), 1.4) * galaxyRadius;
+          const spinAngle = r * 0.20;
+          const armAngle = ((i % arms) * 2 * Math.PI) / arms;
+
+          const randomX = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.36) * (r + 4);
+          const randomY = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.22) * (r + 2);
+          const randomZ = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 0.36) * (r + 4);
+
+          const angle = armAngle + spinAngle;
+          const x = Math.cos(angle) * r + randomX;
+          const z = Math.sin(angle) * r + randomZ;
+          const y = randomY;
+
+          galaxyPos[i * 3] = x;
+          galaxyPos[i * 3 + 1] = y;
+          galaxyPos[i * 3 + 2] = z;
+
+          const distRatio = r / galaxyRadius;
+          if (distRatio < 0.2) {
+              galaxyColors[i * 3] = 1.0;
+              galaxyColors[i * 3 + 1] = 0.92;
+              galaxyColors[i * 3 + 2] = 0.98;
+          } else if (distRatio < 0.62) {
+              galaxyColors[i * 3] = 1.0;
+              galaxyColors[i * 3 + 1] = 0.18 + (1 - distRatio) * 0.35;
+              galaxyColors[i * 3 + 2] = 0.68;
+          } else {
+              galaxyColors[i * 3] = 0.78;
+              galaxyColors[i * 3 + 1] = 0.08;
+              galaxyColors[i * 3 + 2] = 0.56;
+          }
       }
 
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
-      const bounds = galaxyCanvas.getBoundingClientRect();
+      galaxyGeo.setAttribute("position", new THREE.BufferAttribute(galaxyPos, 3));
+      galaxyGeo.setAttribute("color", new THREE.BufferAttribute(galaxyColors, 3));
 
-      galaxyCanvas.width = Math.max(1, Math.round(bounds.width * pixelRatio));
-      galaxyCanvas.height = Math.max(1, Math.round(bounds.height * pixelRatio));
+      const galaxyMaterial = new THREE.PointsMaterial({
+          size: 1.15,
+          map: particleTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+      });
+
+      galaxyPoints = new THREE.Points(galaxyGeo, galaxyMaterial);
+      galaxyDiskGroup.add(galaxyPoints);
+
+      // Lõi trung tâm
+      const centerGeo = new THREE.SphereGeometry(2.3, 32, 32);
+      const centerMat = new THREE.MeshBasicMaterial({ color: 0x06000c });
+      blackHoleCore = new THREE.Mesh(centerGeo, centerMat);
+      galaxyDiskGroup.add(blackHoleCore);
+
+      // Vành đai phát sáng xung quanh lõi
+      const ringGeo = new THREE.RingGeometry(2.5, 5.2, 48);
+      const ringMat = new THREE.MeshBasicMaterial({
+          color: 0xff1a66,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.88,
+          blending: THREE.AdditiveBlending
+      });
+      accretionRing = new THREE.Mesh(ringGeo, ringMat);
+      accretionRing.rotation.x = Math.PI / 2;
+      galaxyDiskGroup.add(accretionRing);
+
+      if (galaxyUniverseGroup) {
+          galaxyUniverseGroup.add(galaxyDiskGroup);
+      } else {
+          threeScene.add(galaxyDiskGroup);
+      }
   }
 
-  /** Vẽ một hạt có lõi sáng; hạt lớn có thêm quầng glow. */
-  function drawGlowParticle(context, x, y, radius, color, alpha) {
-      if (alpha <= 0.015 || radius <= 0.1) {
-          return;
+  /**
+   * Tạo đám mây bụi vũ trụ li ti lấp lánh (3,800 hạt) bao quanh không gian 3D.
+   */
+  function createAmbientDust(particleTexture) {
+      const dustCount = 3800;
+      const dustGeo = new THREE.BufferGeometry();
+      const dustPos = new Float32Array(dustCount * 3);
+      const dustColors = new Float32Array(dustCount * 3);
+
+      for (let i = 0; i < dustCount; i++) {
+          const rad = 25 + Math.random() * 65;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = (Math.random() - 0.5) * Math.PI * 0.85;
+
+          dustPos[i * 3] = rad * Math.cos(phi) * Math.sin(theta);
+          dustPos[i * 3 + 1] = rad * Math.sin(phi) + 4;
+          dustPos[i * 3 + 2] = rad * Math.cos(phi) * Math.cos(theta);
+
+          const p = Math.random();
+          if (p > 0.7) {
+              dustColors[i * 3] = 1.0;
+              dustColors[i * 3 + 1] = 0.92;
+              dustColors[i * 3 + 2] = 0.98;
+          } else if (p > 0.3) {
+              dustColors[i * 3] = 1.0;
+              dustColors[i * 3 + 1] = 0.45;
+              dustColors[i * 3 + 2] = 0.75;
+          } else {
+              dustColors[i * 3] = 0.82;
+              dustColors[i * 3 + 1] = 0.22;
+              dustColors[i * 3 + 2] = 0.85;
+          }
       }
 
-      if (radius > 1.7) {
-          context.fillStyle =
-              `rgba(${color.red},${color.green},${color.blue},${alpha * 0.13})`;
-          context.beginPath();
-          context.arc(x, y, radius * 3.5, 0, Math.PI * 2);
-          context.fill();
-      }
+      dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+      dustGeo.setAttribute("color", new THREE.BufferAttribute(dustColors, 3));
 
-      context.fillStyle =
-          `rgba(${color.red},${color.green},${color.blue},${alpha})`;
-      context.beginPath();
-      context.arc(x, y, radius, 0, Math.PI * 2);
-      context.fill();
+      const dustMat = new THREE.PointsMaterial({
+          size: 0.92,
+          map: particleTexture,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.75,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+      });
+
+      ambientDustPoints = new THREE.Points(dustGeo, dustMat);
+      if (galaxyUniverseGroup) {
+          galaxyUniverseGroup.add(ambientDustPoints);
+      } else {
+          threeScene.add(ambientDustPoints);
+      }
   }
 
-  /** Cập nhật các text/icon theo quỹ đạo ellipse có chiều sâu. */
-  function updateOrbitItems(elapsed, width, height) {
-      const radiusX = Math.min(width * 0.39, 480);
-      
-      const dynamicTiltY = 0.255 + introPointer.dragRotationY * 0.2;
-      const radiusY = Math.min(height * dynamicTiltY, 235);
-      
-      const orbitSpeed = elapsed * 0.000085 + introPointer.dragRotationX;
+  /**
+   * Tạo các vì sao vũ trụ xa xăm trong không gian.
+   */
+  function createBackgroundStars(particleTexture) {
+      const starCount = 2000;
+      const starGeo = new THREE.BufferGeometry();
+      const starPos = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount * 3; i += 3) {
+          starPos[i] = (Math.random() - 0.5) * 220;
+          starPos[i + 1] = (Math.random() - 0.5) * 160;
+          starPos[i + 2] = (Math.random() - 0.5) * 220;
+      }
+      starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+      const starMat = new THREE.PointsMaterial({
+          size: 0.85,
+          color: 0xffd9ec,
+          transparent: true,
+          opacity: 0.75,
+          map: particleTexture,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false
+      });
+      backgroundStars = new THREE.Points(starGeo, starMat);
+      threeScene.add(backgroundStars);
+  }
 
-      orbitItems.forEach((item, index) => {
-          const angle =
-              orbitSpeed +
-              (index / Math.max(orbitItems.length, 1)) * Math.PI * 2;
-          const depth = (Math.sin(angle) + 1) / 2;
-          const x = Math.cos(angle) * radiusX;
-          const y = Math.sin(angle) * radiusY + Math.cos(angle * 2) * 9;
-          const scale = 0.7 + depth * 0.38;
+  /**
+   * Tạo mưa sao băng rơi ngẫu nhiên qua bầu trời 3D.
+   */
+  function spawnShootingStar() {
+      if (!threeScene || shootingStars.length >= 4) return;
+      const startX = (Math.random() - 0.5) * 120 + 35;
+      const startY = 38 + Math.random() * 25;
+      const startZ = (Math.random() - 0.5) * 70 - 20;
 
-          item.style.transform =
-              `translate(-50%, -50%) translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-          item.style.opacity = String(0.38 + depth * 0.62);
-          item.style.zIndex = String(5 + Math.round(depth * 10));
+      const starPoints = 14;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(starPoints * 3);
+      for (let i = 0; i < starPoints; i++) {
+          pos[i * 3] = startX - i * 1.8;
+          pos[i * 3 + 1] = startY - i * 1.0;
+          pos[i * 3 + 2] = startZ - i * 0.5;
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.LineBasicMaterial({
+          color: 0xff99cc,
+          transparent: true,
+          opacity: 0.9,
+          blending: THREE.AdditiveBlending
+      });
+      const line = new THREE.Line(geo, mat);
+      threeScene.add(line);
+      shootingStars.push({
+          line,
+          vx: -2.4,
+          vy: -1.35,
+          vz: -0.65,
+          life: 0,
+          maxLife: 45 + Math.random() * 30
       });
   }
 
-  /** Vòng lặp render Canvas, chỉ chạy khi Intro còn hiển thị. */
-  function renderGalaxyFrame(timestamp) {
-      if (!isGalaxyIntroActive || !galaxyCanvas) {
-          return;
+  /**
+   * Chiếu tọa độ 3D của các dòng chữ chúc mừng nổi lên trên tầng dải bao quanh
+   * và di chuyển theo quy luật các tầng quỹ đạo đồng tâm trên đĩa ngân hà.
+   */
+  function update3DOrbitElements(elapsedTime) {
+      if (!threeCamera || !orbitLayer || !galaxyDiskGroup) return;
+      const items = orbitLayer.querySelectorAll(".orbit-item");
+      if (!items.length) return;
+
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const tempVec = new THREE.Vector3();
+      const totalItems = items.length;
+
+      if (galaxyUniverseGroup) {
+          galaxyUniverseGroup.updateMatrixWorld(true);
       }
 
-      if (!galaxyStartTime) {
-          galaxyStartTime = timestamp;
-      }
+      // 3 tầng quỹ đạo bao quanh bề mặt ngân hà:
+      // Tầng 1 (trong): bán kính 24
+      // Tầng 2 (giữa): bán kính 36
+      // Tầng 3 (ngoài): bán kính 50
+      const tierRadii = [24, 36, 50, 26, 38, 52, 28, 40, 54, 32];
 
-      const elapsed = timestamp - galaxyStartTime;
-      const context = galaxyCanvas.getContext("2d", { alpha: false });
-      const width = galaxyCanvas.width;
-      const height = galaxyCanvas.height;
-      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
-      const cssWidth = width / pixelRatio;
-      const cssHeight = height / pixelRatio;
-      const centerX = cssWidth * 0.5;
-      const centerY = cssHeight * 0.52;
-      const galaxyScale = Math.min(cssWidth, cssHeight) * 0.43;
+      items.forEach((item, index) => {
+          // Góc phân bố quy luật xung quanh đĩa ngân hà
+          const baseAngle = (index / totalItems) * Math.PI * 2;
+          const radius = tierRadii[index % tierRadii.length];
 
-      if (!introPointer.isDragging) {
-          introPointer.targetDragRotationX += introPointer.velocity;
-          introPointer.velocity *= 0.95; // friction
-      }
+          // Nổi lên hẳn trên tầng dải bao quanh (Y = 2.2 + sóng nhấp nhô nhẹ)
+          const elevatedY = 2.2 + Math.sin(elapsedTime * 1.5 + index * 0.8) * 0.45;
 
-      introPointer.dragRotationX += (introPointer.targetDragRotationX - introPointer.dragRotationX) * 0.15;
-      introPointer.dragRotationY += (introPointer.targetDragRotationY - introPointer.dragRotationY) * 0.15;
-
-      const rotation = elapsed * GALAXY_CONFIG.rotationSpeed + introPointer.dragRotationX;
-
-      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      context.globalCompositeOperation = "source-over";
-      context.fillStyle = "#020105";
-      context.fillRect(0, 0, cssWidth, cssHeight);
-      context.globalCompositeOperation = "lighter";
-
-      backgroundStars.forEach((star) => {
-          const flicker = 0.62 + Math.sin(elapsed * 0.0015 + star.twinkle) * 0.38;
-          drawGlowParticle(
-              context,
-              star.x * cssWidth,
-              star.y * cssHeight,
-              star.size,
-              { red: 241, green: 195, blue: 255 },
-              star.alpha * flicker
+          tempVec.set(
+              Math.cos(baseAngle) * radius,
+              elevatedY,
+              Math.sin(baseAngle) * radius
           );
+
+          // Chuyển đổi tọa độ sang World Space
+          tempVec.applyMatrix4(galaxyDiskGroup.matrixWorld);
+
+          // Chiếu tọa độ 3D sang màn hình 2D
+          tempVec.project(threeCamera);
+
+          const isVisible = tempVec.z < 1.0;
+          if (!isVisible) {
+              item.style.opacity = "0";
+              return;
+          }
+
+          const screenX = (tempVec.x * 0.5 + 0.5) * width;
+          const screenY = (-(tempVec.y * 0.5) + 0.5) * height;
+
+          const depthScale = THREE.MathUtils.clamp(1.04 - tempVec.z * 0.42, 0.65, 1.2);
+          let opacity = THREE.MathUtils.clamp(1.18 - tempVec.z * 0.65, 0.4, 1.0);
+
+          // Khi mới phóng to vào chặng 2, lời chúc hiện ra êm dịu
+          const entranceElapsed = performance.now() - stage2EntranceStartTime;
+          if (entranceElapsed < 1200) {
+              const fadeIn = Math.max(0, (entranceElapsed - 400) / 800);
+              opacity *= fadeIn;
+          }
+
+          item.style.transform = `translate3d(${screenX}px, ${screenY}px, 0) translate(-50%, -50%) scale(${depthScale})`;
+          item.style.opacity = opacity.toFixed(2);
+          item.style.zIndex = Math.round(160 - tempVec.z * 80);
       });
-
-      galaxyParticles.forEach((particle) => {
-          const angle = particle.angle + rotation;
-          const radialDistance = particle.radius + particle.spread;
-          const localX = Math.cos(angle) * radialDistance;
-          const localY = Math.sin(angle) * radialDistance;
-          const perspective = 1 + particle.height * 0.3;
-          
-          const dynamicTiltY = 0.34 + introPointer.dragRotationY * 0.3;
-          const x = centerX + localX * galaxyScale * perspective;
-          const y =
-              centerY +
-              (localY * dynamicTiltY + particle.height) * galaxyScale * perspective;
-          const flicker =
-              0.72 + Math.sin(elapsed * 0.002 + particle.twinkle) * 0.28;
-          const depthAlpha = 0.65 + (particle.height + 0.18) * 0.8;
-
-          drawGlowParticle(
-              context,
-              x,
-              y,
-              particle.size * perspective,
-              particle.color,
-              particle.alpha * flicker * depthAlpha
-          );
-      });
-
-      // Glow mềm ở lõi giúp trái tim hòa vào dải ngân hà.
-      const coreGradient = context.createRadialGradient(
-          centerX,
-          centerY,
-          0,
-          centerX,
-          centerY,
-          galaxyScale * 0.3
-      );
-      coreGradient.addColorStop(0, "rgba(255,80,193,0.2)");
-      coreGradient.addColorStop(0.35, "rgba(176,51,255,0.08)");
-      coreGradient.addColorStop(1, "rgba(0,0,0,0)");
-      context.fillStyle = coreGradient;
-      context.beginPath();
-      context.arc(centerX, centerY, galaxyScale * 0.3, 0, Math.PI * 2);
-      context.fill();
-
-      const beat =
-          1 +
-          Math.pow(Math.max(0, Math.sin(elapsed * GALAXY_CONFIG.heartBeatSpeed)), 8) * 0.12;
-      const heartScale = Math.min(cssWidth, cssHeight) * 0.105 * beat;
-      
-      const heartRotation = Math.sin(elapsed * 0.00045) * 0.34 + introPointer.dragRotationX;
-      const cosRotation = Math.cos(heartRotation);
-      const sinRotation = Math.sin(heartRotation);
-
-      heartParticles.forEach((particle) => {
-          const rotatedX =
-              particle.x * cosRotation - particle.z * sinRotation;
-          const rotatedZ =
-              particle.x * sinRotation + particle.z * cosRotation;
-          const perspective = 1 + rotatedZ * 0.32;
-          const flicker =
-              0.78 + Math.sin(elapsed * 0.003 + particle.twinkle) * 0.22;
-
-          drawGlowParticle(
-              context,
-              centerX + rotatedX * heartScale * perspective,
-              centerY + particle.y * heartScale * perspective,
-              particle.size * perspective * beat,
-              particle.color,
-              particle.alpha * flicker
-          );
-      });
-
-      updateOrbitItems(elapsed, cssWidth, cssHeight);
-      galaxyAnimationFrame = window.requestAnimationFrame(renderGalaxyFrame);
   }
 
-  function handleIntroPointerDown(event) {
-      introPointer.isDragging = true;
-      introPointer.startX = event.clientX;
-      introPointer.startY = event.clientY;
-      introPointer.velocity = 0;
-  }
-
-  function handleIntroPointerMove(event) {
-      if (!introPointer.isDragging) return;
-      
-      const deltaX = event.clientX - introPointer.startX;
-      const deltaY = event.clientY - introPointer.startY;
-      
-      const rotXChange = deltaX * 0.004;
-      const rotYChange = deltaY * 0.003;
-      
-      introPointer.targetDragRotationX += rotXChange;
-      introPointer.targetDragRotationY = Math.max(-0.6, Math.min(0.6, introPointer.targetDragRotationY + rotYChange));
-      
-      introPointer.velocity = rotXChange;
-      
-      introPointer.startX = event.clientX;
-      introPointer.startY = event.clientY;
-  }
-
-  function handleIntroPointerUp() {
-      introPointer.isDragging = false;
-  }
-
-  function openIntroMessage(item) {
-      if (!introMessageModal) {
-          return;
-      }
-
-      introLastFocusedElement = item;
-      introMessageTitle.textContent = item.dataset.introTitle || "For you";
-      introMessageText.textContent = item.dataset.introMessage || "";
+  /**
+   * Mở modal hiển thị lời chúc ngọt ngào khi bấm vào lời chúc trong vũ trụ.
+   */
+  function openIntroMessage(button) {
+      if (!introMessageModal || !introMessageTitle || !introMessageText) return;
+      introLastFocusedElement = button;
+      introMessageTitle.textContent = button.dataset.introTitle || "Happy Birthday!";
+      introMessageText.textContent = button.dataset.introMessage || "";
       introMessageModal.classList.add("is-open");
       introMessageModal.setAttribute("aria-hidden", "false");
-
-      window.setTimeout(() => closeIntroMessageButton.focus(), 100);
+      closeIntroMessageButton?.focus();
   }
 
+  /**
+   * Đóng modal lời nhắn yêu thương.
+   */
   function closeIntroMessage() {
-      if (!introMessageModal) {
-          return;
-      }
-
+      if (!introMessageModal) return;
       introMessageModal.classList.remove("is-open");
       introMessageModal.setAttribute("aria-hidden", "true");
-
       if (introLastFocusedElement) {
-          introLastFocusedElement.focus();
+          introLastFocusedElement.focus?.();
+          introLastFocusedElement = null;
       }
   }
 
-  /** Zoom vào trái tim rồi mới để lộ màn hình mật mã bên dưới. */
-  function enterOurUniverse() {
-      if (!isGalaxyIntroActive) {
-          return;
+  /**
+   * Vòng lặp Render chính của Three.js
+   */
+  function animateThreeScene() {
+      if (!isGalaxyIntroActive) return;
+      threeAnimFrame = requestAnimationFrame(animateThreeScene);
+
+      const elapsedTime = threeClock ? threeClock.getElapsedTime() : performance.now() * 0.001;
+
+      // 0. Tính toán hiệu ứng phóng to liên tục khi mới mở chặng 2 (Entrance Zoom)
+      const entranceElapsed = performance.now() - stage2EntranceStartTime;
+      let entranceScale = 1.0;
+      if (entranceElapsed < 1200) {
+          const p = Math.min(1, entranceElapsed / 1200);
+          const ease = 1 - Math.pow(1 - p, 3);
+          entranceScale = THREE.MathUtils.lerp(0.28, 1.0, ease);
+          currentCamDist = THREE.MathUtils.lerp(36, targetCamDist, ease);
       }
 
+      // 1. Nhịp đập trái tim 3D
+      const pulse = 1 + Math.sin(elapsedTime * 2.8) * 0.038 + Math.sin(elapsedTime * 5.6) * 0.012;
+      if (heartPointsGroup) {
+          heartPointsGroup.scale.set(pulse, pulse, pulse);
+          heartPointsGroup.rotation.y = Math.sin(elapsedTime * 0.4) * 0.06;
+      }
+
+      // 2. Chuyển động xoay của đĩa ngân hà
+      if (galaxyDiskGroup) {
+          galaxyDiskGroup.rotation.y = elapsedTime * 0.065;
+      }
+      if (accretionRing) {
+          accretionRing.rotation.z = -elapsedTime * 0.2;
+      }
+
+      // 3. Toàn bộ Vũ trụ liên kết xoay theo kéo rê / cảm ứng & phóng to lúc xuất hiện
+      dragRotX += (targetDragRotX - dragRotX) * 0.08;
+      dragRotY += (targetDragRotY - dragRotY) * 0.08;
+      if (galaxyUniverseGroup) {
+          galaxyUniverseGroup.scale.set(entranceScale, entranceScale, entranceScale);
+          galaxyUniverseGroup.rotation.y = dragRotY + Math.sin(elapsedTime * 0.2) * 0.06;
+          galaxyUniverseGroup.rotation.x = dragRotX;
+      }
+
+      // 4. Bụi vũ trụ li ti trôi bồng bềnh
+      if (ambientDustPoints) {
+          ambientDustPoints.rotation.y = elapsedTime * 0.018;
+          ambientDustPoints.rotation.x = Math.sin(elapsedTime * 0.15) * 0.03;
+          ambientDustPoints.material.opacity = 0.72 + Math.sin(elapsedTime * 2.8) * 0.08;
+      }
+
+      // 5. Hiệu ứng vì sao lấp lánh sinh động (Star twinkling)
+      if (outerHeartPoints) {
+          outerHeartPoints.material.opacity = 0.92 + Math.sin(elapsedTime * 3.8) * 0.07;
+      }
+      if (innerHeartPoints) {
+          innerHeartPoints.material.opacity = 0.86 + Math.cos(elapsedTime * 4.2) * 0.08;
+      }
+      if (galaxyPoints) {
+          galaxyPoints.material.opacity = 0.88 + Math.sin(elapsedTime * 2.2) * 0.07;
+      }
+      if (accretionRing) {
+          accretionRing.material.opacity = 0.85 + Math.sin(elapsedTime * 5.0) * 0.12;
+      }
+
+      // 6. Nội suy camera mượt mà
+      targetCamX += (mouseX - targetCamX) * 0.05;
+      targetCamY += (mouseY - targetCamY) * 0.05;
+      if (entranceElapsed >= 1200) {
+          currentCamDist += (targetCamDist - currentCamDist) * 0.08;
+      }
+
+      if (isEnteringStage3) {
+          const enterProgress = (performance.now() - enterStage3StartTime) / 1000;
+          const zoomProgress = Math.min(1, enterProgress * 1.25);
+          const easeInWarp = Math.pow(zoomProgress, 3);
+          threeCamera.position.z = THREE.MathUtils.lerp(currentCamDist, 2.5, easeInWarp);
+          threeCamera.position.y = THREE.MathUtils.lerp(24, 12.5, easeInWarp);
+          threeCamera.position.x = THREE.MathUtils.lerp(0, 0, easeInWarp);
+          threeCamera.lookAt(0, 12.5, 0);
+      } else {
+          threeCamera.position.x = Math.sin(targetCamX * 2) * (currentCamDist * 0.32);
+          threeCamera.position.y = 24 - targetCamY * 16;
+          threeCamera.position.z = currentCamDist;
+          threeCamera.lookAt(0, 4.5, 0);
+      }
+
+      // 7. Mưa sao băng
+      if (Math.random() < 0.02) spawnShootingStar();
+      for (let i = shootingStars.length - 1; i >= 0; i--) {
+          const s = shootingStars[i];
+          s.line.position.x += s.vx;
+          s.line.position.y += s.vy;
+          s.line.position.z += s.vz;
+          s.life++;
+          s.line.material.opacity = Math.max(0, 0.9 * (1 - s.life / s.maxLife));
+          if (s.life >= s.maxLife) {
+              threeScene.remove(s.line);
+              s.line.geometry.dispose();
+              s.line.material.dispose();
+              shootingStars.splice(i, 1);
+          }
+      }
+
+      // 8. Cập nhật vị trí các lời chúc nổi trên tầng dải ngân hà
+      update3DOrbitElements(elapsedTime);
+
+      if (threeRenderer && threeScene && threeCamera) {
+          threeRenderer.render(threeScene, threeCamera);
+      }
+  }
+
+  /**
+   * Bay xuyên qua trái tim 3D để bước vào Chặng 3 (Màn hình mật mã).
+   */
+  function enterOurUniverse() {
+      if (!isGalaxyIntroActive || isEnteringStage3) return;
+      isEnteringStage3 = true;
+      enterStage3StartTime = performance.now();
       closeIntroMessage();
-      galaxyIntro.classList.add("is-entering");
+      galaxyIntro?.classList.add("is-entering");
 
       window.setTimeout(() => {
-          galaxyIntro.classList.add("is-hidden");
-          galaxyIntro.setAttribute("aria-hidden", "true");
+          galaxyIntro?.classList.add("is-hidden");
+          galaxyIntro?.setAttribute("aria-hidden", "true");
           isGalaxyIntroActive = false;
-          window.cancelAnimationFrame(galaxyAnimationFrame);
-          lockScreen.classList.remove("is-hidden");
-          lockScreen.setAttribute("aria-hidden", "false");
-          lockScreen.focus?.();
+          if (threeAnimFrame) {
+              cancelAnimationFrame(threeAnimFrame);
+          }
+          document.body.classList.add("is-stage-light");
+          lockScreen?.classList.remove("is-hidden");
+          lockScreen?.setAttribute("aria-hidden", "false");
+          lockScreen?.focus?.();
 
           if (keypadNumberButtons[0]) {
               keypadNumberButtons[0].focus();
@@ -664,54 +954,157 @@
   }
 
   function handleIntroKeyboard(event) {
-      if (!isGalaxyIntroActive) {
-          return;
-      }
-
+      if (!isGalaxyIntroActive) return;
       if (
           event.key === "Escape" &&
-          introMessageModal.classList.contains("is-open")
+          introMessageModal?.classList.contains("is-open")
       ) {
           event.preventDefault();
           closeIntroMessage();
       }
   }
 
+  /**
+   * Khởi tạo toàn bộ không gian Three.js Interactive 3D Heart Galaxy.
+   */
   function initializeGalaxyIntro() {
-      if (!galaxyIntro || !galaxyCanvas) {
+      if (typeof THREE === "undefined") {
+          console.error("Three.js r125 library is not loaded.");
+          return;
+      }
+
+      const galaxyIntroSection = document.getElementById("galaxyIntro");
+      const canvas = document.getElementById("galaxyCanvas");
+      if (!galaxyIntroSection || !canvas) {
           isGalaxyIntroActive = false;
           return;
       }
 
-      galaxyCanvas.style.touchAction = "none";
+      if (threeAnimFrame) {
+          cancelAnimationFrame(threeAnimFrame);
+      }
 
-      createGalaxyParticles();
-      resizeGalaxyCanvas();
-      galaxyStartTime = 0;
-      galaxyAnimationFrame = window.requestAnimationFrame(renderGalaxyFrame);
+      isGalaxyIntroActive = true;
+      isEnteringStage3 = false;
+      stage2EntranceStartTime = performance.now();
+      currentCamDist = 36;
 
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      // 1. Scene & Sương mù vũ trụ hồng tím huyền ảo
+      threeScene = new THREE.Scene();
+      threeScene.fog = new THREE.FogExp2(0x06010c, 0.0018);
+
+      // 2. Camera phối cảnh (bắt đầu ở cự ly 36 và phóng mượt ra 60)
+      threeCamera = new THREE.PerspectiveCamera(60, width / height, 0.1, 2000);
+      threeCamera.position.set(0, 24, 36);
+
+      // 3. WebGL Renderer
+      threeRenderer = new THREE.WebGLRenderer({
+          canvas: canvas,
+          alpha: true,
+          antialias: true
+      });
+      threeRenderer.setSize(width, height);
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      threeRenderer.setClearColor(0x000000, 0);
+
+      threeClock = new THREE.Clock();
+
+      // 4. Nhóm Vũ trụ liên kết chung
+      galaxyUniverseGroup = new THREE.Group();
+      threeScene.add(galaxyUniverseGroup);
+
+      // 5. Khởi tạo Texture vì sao & các hệ thống hạt 3D
+      const particleTexture = createParticleTexture();
+      createDualHeartSystem(particleTexture);
+      createSpiralGalaxy(particleTexture);
+      createAmbientDust(particleTexture);
+      createBackgroundStars(particleTexture);
+
+      // 6. Thao tác cảm ứng & chuột (Kéo xoay đa chiều & Parallax)
+      window.addEventListener("mousemove", (event) => {
+          mouseX = (event.clientX - window.innerWidth / 2) * 0.0006;
+          mouseY = (event.clientY - window.innerHeight / 2) * 0.0004;
+      }, { passive: true });
+
+      canvas.addEventListener("pointerdown", (event) => {
+          isDraggingStage2 = true;
+          lastPointerX = event.clientX;
+          lastPointerY = event.clientY;
+      });
+
+      window.addEventListener("pointermove", (event) => {
+          if (!isDraggingStage2) return;
+          const deltaX = event.clientX - lastPointerX;
+          const deltaY = event.clientY - lastPointerY;
+          lastPointerX = event.clientX;
+          lastPointerY = event.clientY;
+
+          targetDragRotY += deltaX * 0.008;
+          targetDragRotX = THREE.MathUtils.clamp(targetDragRotX + deltaY * 0.008, -0.6, 0.6);
+      }, { passive: true });
+
+      window.addEventListener("pointerup", () => {
+          isDraggingStage2 = false;
+      });
+
+      window.addEventListener("pointercancel", () => {
+          isDraggingStage2 = false;
+      });
+
+      // Lăn chuột phóng to thu nhỏ
+      galaxyIntroSection.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          targetCamDist = THREE.MathUtils.clamp(targetCamDist + (event.deltaY > 0 ? 4 : -4), 30, 95);
+      }, { passive: false });
+
+      // Cảm ứng 2 ngón (Pinch-to-zoom)
+      canvas.addEventListener("touchstart", (event) => {
+          if (event.touches.length === 2) {
+              const dx = event.touches[0].clientX - event.touches[1].clientX;
+              const dy = event.touches[0].clientY - event.touches[1].clientY;
+              pinchStartDist = Math.hypot(dx, dy);
+              basePinchDist = targetCamDist;
+          }
+      }, { passive: true });
+
+      canvas.addEventListener("touchmove", (event) => {
+          if (event.touches.length === 2 && pinchStartDist > 0) {
+              const dx = event.touches[0].clientX - event.touches[1].clientX;
+              const dy = event.touches[0].clientY - event.touches[1].clientY;
+              const currentDist = Math.hypot(dx, dy);
+              const scale = currentDist / pinchStartDist;
+              targetCamDist = THREE.MathUtils.clamp(basePinchDist / scale, 30, 95);
+          }
+      }, { passive: true });
+
+      // Sự kiện mở lời chúc
       orbitItems.forEach((item) => {
           item.addEventListener("click", () => openIntroMessage(item));
       });
 
-      enterUniverseButton.addEventListener("click", enterOurUniverse);
-      closeIntroMessageButton.addEventListener("click", closeIntroMessage);
-      introMessageModal
-          .querySelector("[data-close-intro-message]")
-          .addEventListener("click", closeIntroMessage);
+      closeIntroMessageButton?.addEventListener("click", closeIntroMessage);
+      introMessageBackdrop?.addEventListener("click", closeIntroMessage);
 
-      const introSection = document.getElementById("galaxyIntro");
-      if (introSection) {
-          introSection.addEventListener("pointerdown", handleIntroPointerDown, { passive: true });
-          window.addEventListener("pointermove", handleIntroPointerMove, { passive: true });
-          window.addEventListener("pointerup", handleIntroPointerUp, { passive: true });
-          window.addEventListener("pointercancel", handleIntroPointerUp, { passive: true });
-      }
-      window.addEventListener("resize", resizeGalaxyCanvas, {
-          passive: true
-      });
+      enterUniverseButton?.addEventListener("click", enterOurUniverse);
+
+      window.addEventListener("resize", () => {
+          if (!threeCamera || !threeRenderer) return;
+          const newW = window.innerWidth;
+          const newH = window.innerHeight;
+          threeCamera.aspect = newW / newH;
+          threeCamera.updateProjectionMatrix();
+          threeRenderer.setSize(newW, newH);
+      }, { passive: true });
+
       document.addEventListener("keydown", handleIntroKeyboard);
+
+      // Bắt đầu vòng lặp vẽ Three.js
+      animateThreeScene();
   }
+
 
   /**
    * Hiển thị thông báo nhỏ ở cuối màn hình.
@@ -2129,73 +2522,157 @@
           ctx.restore();
       }
 
-      function drawPortalRing(ctx, cx, cy, radius, alpha) {
+      // Khởi tạo dữ liệu dải hạt bụi sao cho Cổng Không Gian Xoáy (Stardust Vortex Portal)
+      const PORTAL_VORTEX_COUNT = 420;
+      const portalVortexParticles = [];
+      for (let i = 0; i < PORTAL_VORTEX_COUNT; i++) {
+          portalVortexParticles.push({
+              arm: i % 3,
+              armOffset: (Math.floor(i / 3) / (PORTAL_VORTEX_COUNT / 3)),
+              jitterAngle: (Math.random() - 0.5) * 0.35,
+              size: 1.0 + Math.random() * 2.2,
+              speed: 0.0016 + Math.random() * 0.0012,
+              colorType: Math.random()
+          });
+      }
+
+      // Khởi tạo dữ liệu Thiên Hà Trái Tim Hạt Tinh Tú (Heart Particle Galaxy)
+      const PORTAL_HEART_COUNT = 360;
+      const portalHeartParticles = [];
+      for (let i = 0; i < PORTAL_HEART_COUNT; i++) {
+          const t = Math.PI * 2 * (i / PORTAL_HEART_COUNT);
+          // Công thức đường cong trái tim 3D
+          const hx = 16 * Math.pow(Math.sin(t), 3);
+          const hy = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+          
+          const isInner = Math.random() < 0.35;
+          const scaleFactor = isInner ? (0.3 + 0.6 * Math.random()) : 1.0;
+          const jitter = (Math.random() - 0.5) * 1.5;
+
+          portalHeartParticles.push({
+              x: hx * scaleFactor + jitter,
+              y: hy * scaleFactor + jitter,
+              size: 1.2 + Math.random() * 2.2,
+              colorType: Math.random(),
+              twinkleSpeed: 0.003 + Math.random() * 0.005,
+              phase: Math.random() * Math.PI * 2
+          });
+      }
+
+      /**
+       * Vẽ Cổng Không Gian Xoáy Bụi Sao (thay thế vòng tròn nét kẻ cơ học).
+       * Gồm các dải hạt bụi sao xoáy ốc huyền ảo nở rộng dần theo bán kính.
+       */
+      function drawPortalVortexStreams(ctx, cx, cy, radius, alpha, now) {
           if (radius <= 0 || alpha <= 0) return;
           ctx.save();
           ctx.globalAlpha = Math.min(1, alpha);
 
-          // Vùng hào quang năng lượng bên trong vòng sáng
-          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.25);
-          grad.addColorStop(0, "rgba(255, 195, 235, 0.45)");
-          grad.addColorStop(0.55, "rgba(235, 90, 180, 0.28)");
-          grad.addColorStop(0.85, "rgba(180, 60, 240, 0.16)");
-          grad.addColorStop(1, "rgba(0, 0, 0, 0)");
-          ctx.fillStyle = grad;
+          // 1. Quầng sương mù năng lượng huyền ảo ở tâm cổng
+          const hazeGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * 1.35);
+          hazeGrad.addColorStop(0, "rgba(255, 190, 235, 0.42)");
+          hazeGrad.addColorStop(0.45, "rgba(235, 70, 170, 0.22)");
+          hazeGrad.addColorStop(0.8, "rgba(160, 40, 210, 0.12)");
+          hazeGrad.addColorStop(1, "rgba(5, 1, 10, 0)");
+          ctx.fillStyle = hazeGrad;
           ctx.beginPath();
-          ctx.arc(cx, cy, radius * 1.25, 0, Math.PI * 2);
+          ctx.arc(cx, cy, radius * 1.35, 0, Math.PI * 2);
           ctx.fill();
 
-          // Hào quang neon phát sáng
-          ctx.shadowBlur = Math.min(35, radius * 0.5 + 12);
-          ctx.shadowColor = "#ff69b4";
+          // 2. Các dải hạt bụi sao xoáy ốc (Stardust Spiral Streams)
+          const totalArms = 3;
+          for (let i = 0; i < PORTAL_VORTEX_COUNT; i++) {
+              const p = portalVortexParticles[i];
+              // Khoảng cách bán kính tỏa dần từ tâm ra ngoài biên vòng sáng
+              const r = p.armOffset * radius * 1.28 + 6;
+              // Góc xoáy theo thời gian và bán kính tạo dạng xoắn ốc chuyển động
+              const angle = (p.arm / totalArms) * Math.PI * 2 + now * p.speed + (r / 50) + p.jitterAngle;
 
-          // Viền chính của vòng sáng
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = Math.max(2, Math.min(8, radius * 0.05));
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-          ctx.stroke();
+              const px = cx + Math.cos(angle) * r;
+              const py = cy + Math.sin(angle) * r;
 
-          // Viền phụ màu hồng neon tạo hiệu ứng thấu kính ánh sáng
-          ctx.strokeStyle = "rgba(255, 110, 185, 0.75)";
-          ctx.lineWidth = Math.max(1.5, ctx.lineWidth * 0.6);
-          ctx.beginPath();
-          ctx.arc(cx, cy, radius * 1.08, 0, Math.PI * 2);
-          ctx.stroke();
+              // Màu hạt bụi sao lấp lánh
+              let pColor;
+              if (p.colorType > 0.75) {
+                  pColor = "rgba(255, 255, 255, 0.95)"; // Kim cương trắng
+              } else if (p.colorType > 0.35) {
+                  pColor = "rgba(255, 140, 205, 0.85)"; // Hồng neon
+              } else {
+                  pColor = "rgba(240, 60, 160, 0.75)";  // Hồng tím ruby
+              }
+
+              ctx.fillStyle = pColor;
+              ctx.shadowColor = "#ff4da6";
+              ctx.shadowBlur = 6;
+
+              const pSize = Math.max(0.8, p.size * (0.8 + 0.4 * Math.sin(now * 0.004 + i)));
+              ctx.beginPath();
+              ctx.arc(px, py, pSize, 0, Math.PI * 2);
+              ctx.fill();
+          }
 
           ctx.restore();
       }
 
-      function drawCenterGlowingHeart(ctx, cx, cy, size, alpha) {
+      /**
+       * Vẽ Thiên Hà Trái Tim Hạt Tinh Tú (thay thế khối trái tim 2D đặc màu hồng).
+       * Được cấu tạo từ hàng trăm hạt sao lấp lánh theo phương trình đường cong trái tim 3D.
+       */
+      function drawHeartParticleGalaxy(ctx, cx, cy, size, alpha, now) {
           if (size <= 0 || alpha <= 0) return;
           ctx.save();
           ctx.globalAlpha = Math.min(1, alpha);
 
-          // Hào quang rực rỡ tỏa ra từ trái tim
-          ctx.shadowBlur = Math.min(45, size * 0.7 + 12);
-          ctx.shadowColor = "#ff4fbd";
-
-          // Màu gradient từ tâm trắng sáng tỏa ra hồng thắm
-          const heartGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 1.3);
-          heartGrad.addColorStop(0, "#ffffff");
-          heartGrad.addColorStop(0.4, "#ff7db8");
-          heartGrad.addColorStop(0.85, "#eb3687");
-          heartGrad.addColorStop(1, "#c91668");
-          ctx.fillStyle = heartGrad;
-
+          // 1. Quầng sáng êm dịu tỏa ra từ tâm cụm sao trái tim
+          const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 1.5);
+          glowGrad.addColorStop(0, "rgba(255, 255, 255, 0.45)");
+          glowGrad.addColorStop(0.35, "rgba(255, 120, 195, 0.28)");
+          glowGrad.addColorStop(0.75, "rgba(220, 40, 130, 0.14)");
+          glowGrad.addColorStop(1, "rgba(5, 1, 10, 0)");
+          ctx.fillStyle = glowGrad;
           ctx.beginPath();
-          ctx.moveTo(cx, cy - size * 0.35);
-          ctx.bezierCurveTo(cx - size * 0.8, cy - size * 1.05, cx - size * 1.5, cy - size * 0.1, cx, cy + size * 1.2);
-          ctx.bezierCurveTo(cx + size * 1.5, cy - size * 0.1, cx + size * 0.8, cy - size * 1.05, cx, cy - size * 0.35);
-          ctx.closePath();
+          ctx.arc(cx, cy, size * 1.5, 0, Math.PI * 2);
           ctx.fill();
+
+          // 2. Nhịp đập trái tim nhẹ nhàng
+          const heartbeatPulse = 1 + Math.sin(now * 0.006) * 0.045;
+          const scale = (size / 16) * heartbeatPulse;
+
+          // 3. Vẽ từng hạt tinh tú cấu thành trái tim
+          for (let i = 0; i < PORTAL_HEART_COUNT; i++) {
+              const p = portalHeartParticles[i];
+              const px = cx + p.x * scale;
+              const py = cy + p.y * scale;
+
+              // Nhấp nháy nhẹ từng hạt tạo cảm giác thiên hà sao sống động
+              const twinkle = 0.7 + Math.sin(now * p.twinkleSpeed + p.phase) * 0.3;
+
+              let pColor;
+              if (p.colorType > 0.7) {
+                  pColor = `rgba(255, 255, 255, ${twinkle})`;
+              } else if (p.colorType > 0.3) {
+                  pColor = `rgba(255, 140, 205, ${twinkle * 0.9})`;
+              } else {
+                  pColor = `rgba(255, 50, 150, ${twinkle * 0.85})`;
+              }
+
+              ctx.fillStyle = pColor;
+              ctx.shadowColor = "#ff2a9d";
+              ctx.shadowBlur = Math.min(14, size * 0.4 + 4);
+
+              // Khi kích thước lớn (bay lại gần), hạt sao nở to tương ứng
+              const pSize = Math.max(0.9, p.size * Math.min(2.5, 0.7 + size * 0.035));
+              ctx.beginPath();
+              ctx.arc(px, py, pSize, 0, Math.PI * 2);
+              ctx.fill();
+          }
 
           ctx.restore();
       }
-
       let warpSpeed = 1.2;
       let isWarping = false;
       let warpStartTime = 0;
+      let hasTransitionedToGalaxy = false;
 
       function renderWarpFrame() {
           if (preIntroScreen.classList.contains("is-hidden")) return;
@@ -2286,10 +2763,10 @@
                   const p1 = (elapsedWarp - 2000) / 1200;
                   const ringRadius = 15 + p1 * 50;
                   const ringAlpha = Math.min(1, p1 * 1.2);
-                  drawPortalRing(ctx, cx, cy, ringRadius, ringAlpha);
+                  drawPortalVortexStreams(ctx, cx, cy, ringRadius, ringAlpha, now);
 
                   const centerHeartSize = 6 + p1 * 14;
-                  drawCenterGlowingHeart(ctx, cx, cy, centerHeartSize, Math.min(1, p1 * 1.2));
+                  drawHeartParticleGalaxy(ctx, cx, cy, centerHeartSize, Math.min(1, p1 * 1.2), now);
               } else if (elapsedWarp >= 3200) {
                   // Giai đoạn: Bay xuyên qua vòng sáng, vòng sáng mở rộng và trái tim phóng to liên tục
                   const p2 = Math.min(1, (elapsedWarp - 3200) / 1200);
@@ -2299,12 +2776,12 @@
                   // Vòng sáng nở to bao trùm toàn bộ màn hình
                   const ringRadius = 65 + easeZoom * (maxDim * 1.4);
                   const ringAlpha = Math.max(0, 1 - p2 * 0.6);
-                  drawPortalRing(ctx, cx, cy, ringRadius, ringAlpha);
+                  drawPortalVortexStreams(ctx, cx, cy, ringRadius, ringAlpha, now);
 
                   // Trái tim ở giữa phóng to liên tục từ xa lại gần
                   const targetHeartMax = Math.min(width, height) * 0.22;
                   const centerHeartSize = 20 + easeZoom * targetHeartMax;
-                  drawCenterGlowingHeart(ctx, cx, cy, centerHeartSize, 1);
+                  drawHeartParticleGalaxy(ctx, cx, cy, centerHeartSize, 1, now);
               }
 
               // Gia tốc laser trong 2s đầu
@@ -2312,10 +2789,18 @@
                   warpSpeed = Math.min(warpSpeed * 1.055, 110);
               }
 
-              // Chuyển cảnh hoàn tất tại 4.4s: Vào thẳng Stage 2 (Dải Ngân Hà)
-              if (elapsedWarp >= 4400) {
+              // Bắt đầu hòa tan mượt mà sang Stage 2 tại 4.1s (cross-dissolve hoàn toàn trong không gian tối)
+              if (elapsedWarp >= 4100 && !hasTransitionedToGalaxy) {
+                  hasTransitionedToGalaxy = true;
                   galaxyIntroSection.classList.remove("is-hidden");
+                  galaxyIntroSection.setAttribute("aria-hidden", "false");
                   initializeGalaxyIntro();
+                  preIntroScreen.style.transition = "opacity 0.45s ease";
+                  preIntroScreen.style.opacity = "0";
+              }
+
+              // Sau khi hòa tan hoàn toàn (4.55s), ẩn hẳn Stage 1 và ngắt vòng lặp warp
+              if (elapsedWarp >= 4550) {
                   preIntroScreen.classList.add("is-hidden");
                   window.cancelAnimationFrame(warpAnimationFrame);
                   return;

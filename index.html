@@ -27,7 +27,7 @@
       <meta http-equiv="Expires" content="0">
 
       <!-- CSS được tách riêng hoàn toàn -->
-      <link rel="stylesheet" href="css/style.css?v=20261009_1851">
+      <link rel="stylesheet" href="css/style.css?v=20261013_2315">
   </head>
 
   <body>
@@ -50,7 +50,7 @@
       <section
           id="galaxyIntro"
           class="galaxy-intro is-hidden"
-          aria-labelledby="introTitle"
+          aria-label="Vũ trụ trái tim 3D"
           aria-hidden="true"
       >
           <canvas
@@ -62,80 +62,107 @@
           <div class="intro-nebula" aria-hidden="true"></div>
           <div class="intro-vignette" aria-hidden="true"></div>
 
-          <div class="intro-copy">
-              <p class="intro-kicker">A universe made just for you</p>
-              <h1 id="introTitle" class="intro-title">
-                  To the one who makes
-                  <span>my universe glow</span>
-              </h1>
-              <p class="intro-subtitle">
-                  Chạm vào những lời yêu thương đang bay giữa các vì sao
-              </p>
-          </div>
-
-          <!-- Các nút này được JavaScript đặt lên quỹ đạo 3D giả lập. -->
+          <!-- Các nút này được JavaScript đặt lên quỹ đạo 3D đồng bộ với Three.js -->
           <div id="orbitLayer" class="orbit-layer">
               <button
                   class="orbit-item orbit-text"
                   type="button"
                   data-orbit-index="0"
-                  data-intro-title="Happy Birthday"
-                  data-intro-message="Chúc cô gái đặc biệt nhất của anh có một sinh nhật ngập tràn tiếng cười và yêu thương."
+                  data-intro-title="Happy Birthday!"
+                  data-intro-message="Chúc cô gái đặc biệt nhất của anh có một ngày sinh nhật ngập tràn tiếng cười, niềm vui và hạnh phúc trọn vẹn nhất!"
               >
-                  Happy Birthday
+                  Chúc mừng sinh nhật ♥
               </button>
 
               <button
-                  class="orbit-item orbit-icon"
+                  class="orbit-item orbit-text"
                   type="button"
                   data-orbit-index="1"
-                  data-intro-title="Một trái tim nhỏ"
-                  data-intro-message="Trái tim này luôn hướng về em, hôm nay và cả những ngày thật lâu về sau."
-                  aria-label="Mở lời nhắn từ trái tim"
+                  data-intro-title="HAPPY BIRTHDAY 💖"
+                  data-intro-message="Sinh nhật thật rực rỡ và ngọt ngào nhé công chúa, mỗi khoảnh khắc đều có anh đồng hành cùng em!"
               >
-                  ♥
+                  HAPPY BIRTHDAY 💖
               </button>
 
               <button
                   class="orbit-item orbit-text"
                   type="button"
                   data-orbit-index="2"
-                  data-intro-title="Mi Amor"
-                  data-intro-message="Cảm ơn em vì đã xuất hiện và khiến thế giới của anh trở nên dịu dàng hơn."
+                  data-intro-title="MI AMOR ETERNO ∞"
+                  data-intro-message="Tình cảm anh dành cho em như vũ trụ bao la này, vô tận và không bao giờ đổi thay."
               >
-                  Mi Amor
+                  MI AMOR ETERNO ∞
               </button>
 
               <button
-                  class="orbit-item orbit-icon"
+                  class="orbit-item orbit-text"
                   type="button"
                   data-orbit-index="3"
-                  data-intro-title="Ngôi sao của anh"
-                  data-intro-message="Dù giữa hàng triệu vì sao, anh vẫn sẽ luôn nhận ra ánh sáng của em."
-                  aria-label="Mở lời nhắn từ ngôi sao"
+                  data-intro-title="ERES MAGIA ✨"
+                  data-intro-message="Sự hiện diện của em chính là phép màu tuyệt vời nhất làm bừng sáng thế giới của anh."
               >
-                  ✦
+                  ERES MAGIA ✨
               </button>
 
               <button
                   class="orbit-item orbit-text"
                   type="button"
                   data-orbit-index="4"
-                  data-intro-title="I Love You"
-                  data-intro-message="Ba từ thật ngắn, nhưng là điều anh muốn nói với em trong tất cả những ngày phía trước."
+                  data-intro-title="SIEMPRE JUNTOS ♥"
+                  data-intro-message="Dù ngày nắng hay ngày mưa, tay trong tay mình sẽ cùng nhau đi qua mọi chặng đường hạnh phúc."
               >
-                  I Love You
+                  SIEMPRE JUNTOS ♥
+              </button>
+
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="5"
+                  data-intro-title="TE ADORO ✧"
+                  data-intro-message="Thương em, yêu em và trân trọng từng phút giây ngọt ngào được ở bên em."
+              >
+                  TE ADORO ✧
+              </button>
+
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="6"
+                  data-intro-title="CHÚC MỪNG SINH NHẬT 🎂"
+                  data-intro-message="Chúc em tuổi mới ngày càng xinh đẹp, luôn tự tin và đạt được mọi ước mơ em ấp ủ!"
+              >
+                  CHÚC MỪNG SINH NHẬT 🎂
+              </button>
+
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="7"
+                  data-intro-title="Yêu em mãi mãi ∞"
+                  data-intro-message="Cảm ơn em vì đã xuất hiện và khiến thế giới của anh trở nên dịu dàng và ấm áp hơn."
+              >
+                  Yêu em mãi mãi ∞
               </button>
 
               <button
                   class="orbit-item orbit-icon"
                   type="button"
-                  data-orbit-index="5"
-                  data-intro-title="Món quà bí mật"
-                  data-intro-message="Một thế giới nhỏ đã được chuẩn bị riêng cho em. Hãy bước vào và khám phá nhé!"
+                  data-orbit-index="8"
+                  data-intro-title="Món quà bí mật 🎁"
+                  data-intro-message="Một vũ trụ kỷ niệm và những điều bất ngờ đang chờ em khám phá ở phía sau cánh cửa!"
                   aria-label="Mở lời nhắn từ món quà"
               >
                   🎁
+              </button>
+
+              <button
+                  class="orbit-item orbit-text"
+                  type="button"
+                  data-orbit-index="9"
+                  data-intro-title="My Sweetheart 🎀"
+                  data-intro-message="Em là phiên bản đáng yêu nhất trên đời. Chúc mừng sinh nhật em yêu của anh!"
+              >
+                  My Sweetheart 🎀
               </button>
           </div>
 
@@ -144,6 +171,12 @@
               <span>Bước vào thế giới của chúng mình</span>
               <span class="enter-button-arrow" aria-hidden="true">→</span>
           </button>
+
+
+
+          <div class="intro-zoom-hint" aria-hidden="true">
+              <span>✦ Lăn chuột hoặc chạm 2 ngón để phóng to thu nhỏ 3D ✦</span>
+          </div>
 
           <p class="intro-sound-note">
               <span aria-hidden="true">✧</span> Một điều kỳ diệu đang chờ em
@@ -788,7 +821,9 @@
           aria-live="polite"
       ></div>
 
-      <!-- JavaScript được tách riêng hoàn toàn -->
-      <script src="js/main.js?v=20261009_1851"></script>
+      <!-- Thư viện Three.js Engine 3D cho chặng 2 -->
+      <script src="js/three.min.js"></script>
+      <!-- JavaScript chính của website -->
+      <script src="js/main.js?v=20261013_2315"></script>
   </body>
   </html>
